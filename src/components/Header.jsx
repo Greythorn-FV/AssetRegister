@@ -23,11 +23,13 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '36px',
-    position: 'relative'
+    gap: '20px',
+    flexWrap: 'wrap'
   },
   logo: {
     height: '60px',
-    width: 'auto'
+    width: 'auto',
+    flexShrink: 0
   },
   title: {
     fontSize: '42px',
@@ -36,13 +38,14 @@ const styles = {
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     letterSpacing: '-1px',
-    position: 'absolute',
-    left: '50%',
-    transform: 'translateX(-50%)'
+    flex: '1 1 auto',
+    textAlign: 'center',
+    minWidth: '300px'
   },
   actions: {
     display: 'flex',
-    gap: '14px'
+    gap: '14px',
+    flexShrink: 0
   }
 };
 
