@@ -1,3 +1,6 @@
+// File: src/components/GanttChart.jsx
+// COMPLETE VERSION - Timeline + Payment Calendar
+
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { getAllContracts } from '../services/firestoreService.js';
@@ -6,6 +9,7 @@ import { formatMonthYear } from '../utils/dateHelpers.js';
 import { formatCurrency } from '../utils/currencyHelpers.js';
 import { addMonths, parseISO, format } from 'date-fns';
 import Header from './Header.jsx';
+import PaymentCalendar from './PaymentCalendar.jsx';
 
 const GanttChart = ({ onBack }) => {
   const [contracts, setContracts] = useState([]);
@@ -111,7 +115,7 @@ const GanttChart = ({ onBack }) => {
   if (loading) {
     return (
       <div style={styles.loading}>
-        <div style={styles.loadingText}>Loading Gantt view...</div>
+        <div style={styles.loadingText}>Loading timeline...</div>
       </div>
     );
   }
@@ -141,6 +145,7 @@ const GanttChart = ({ onBack }) => {
         </button>
       </Header>
 
+      {/* GANTT TIMELINE TABLE */}
       <div style={styles.tableWrapper}>
         <div style={styles.tableContainer}>
           <table style={styles.table}>
@@ -234,6 +239,9 @@ const GanttChart = ({ onBack }) => {
           </div>
         </div>
       </div>
+
+      {/* PAYMENT CALENDAR - NEW SECTION */}
+      <PaymentCalendar contracts={contracts} />
     </div>
   );
 };
