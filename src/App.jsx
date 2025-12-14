@@ -1,27 +1,32 @@
+// File: src/App.jsx
+// UPDATED - Add Reports Page Navigation
+
 import React, { useState } from 'react';
 import Dashboard from './components/Dashboard.jsx';
 import GanttChart from './components/GanttChart.jsx';
+import ReportsPage from './components/ReportsPage.jsx'; // ADD THIS IMPORT
 
 function App() {
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' or 'gantt'
+  const [view, setView] = useState('dashboard'); // dashboard, gantt, reports
 
   return (
-    <div style={styles.app}>
-      {currentView === 'dashboard' && (
-        <Dashboard onViewGantt={() => setCurrentView('gantt')} />
+    <div className="App">
+      {view === 'dashboard' && (
+        <Dashboard 
+          onViewGantt={() => setView('gantt')}
+          onViewReports={() => setView('reports')} // ADD THIS PROP
+        />
       )}
-      {currentView === 'gantt' && (
-        <GanttChart onBack={() => setCurrentView('dashboard')} />
+      
+      {view === 'gantt' && (
+        <GanttChart onBack={() => setView('dashboard')} />
+      )}
+
+      {view === 'reports' && (
+        <ReportsPage onBack={() => setView('dashboard')} /> // ADD THIS SECTION
       )}
     </div>
   );
 }
-
-const styles = {
-  app: {
-    minHeight: '100vh',
-    background: '#f5f7fa'
-  }
-};
 
 export default App;

@@ -1,58 +1,97 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp, FileText, Calendar, Users, Zap } from 'lucide-react';
-import KPICard from './KPICard.jsx';
+import { TrendingUp, FileText, Calendar, Users, Search, Plus, Zap, Upload, BarChart3 } from 'lucide-react';
+import { getAllContracts, searchByRegistration, searchByContractNumber } from '../services/firestoreService.js';
+import { calculateContractMetrics } from '../services/calculationService.js';
 import ContractModal from './ContractModal.jsx';
 import ContractDetailModal from './ContractDetailModal.jsx';
-import SearchBar from './SearchBar.jsx';
-import ContractTable from './ContractTable.jsx';
-import { getAllContracts, searchByRegistration, searchByContractNumber } from '../services/firestoreService.js';
-import { calculatePortfolioStats } from '../services/calculationService.js';
-import { formatCurrency, formatCompactCurrency } from '../utils/currencyHelpers.js';
+import Header from './Header.jsx';
+import ContractImportModal from './ContractImportModal.jsx';
 
-const Dashboard = ({ onViewGantt }) => {
+
+const Dashboard = ({ onViewGantt, onViewReports }) => {
   const [contracts, setContracts] = useState([]);
-  const [filteredContracts, setFilteredContracts] = useState([]);
-  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedContract, setSelectedContract] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
   useEffect(() => {
     loadContracts();
   }, []);
-  
-  useEffect(() => {
-    if (contracts.length > 0) {
-      const portfolioStats = calculatePortfolioStats(contracts);
-      setStats(portfolioStats);
-    }
-  }, [contracts]);
-  
-  useEffect(() => {
-    if (statusFilter === 'all') {
-      setFilteredContracts(contracts);
-    } else {
-      setFilteredContracts(contracts.filter(c => c.status === statusFilter));
-    }
-  }, [statusFilter, contracts]);
-  
+
   const loadContracts = async () => {
     try {
-      setLoading(true);
       const data = await getAllContracts();
       setContracts(data);
-      setFilteredContracts(data);
+      setLoading(false);
     } catch (error) {
       console.error('Error loading contracts:', error);
-      alert('Failed to load contracts: ' + error.message);
-    } finally {
       setLoading(false);
     }
   };
-  
+
+  const calculateDashboardKPIs = () => {
+    const activeContracts = contracts.filter(c => c.status === 'active');
+    
+    const totalCapitalOutstanding = activeContracts.reduce((sum, contract) => {
+      const metrics = calculateContractMetrics(contract);
+      return sum + (metrics.capitalOutstanding || 0);
+    }, 0);
+
+    const totalInterestOutstanding = activeContracts.reduce((sum, contract) => {
+      const metrics = calculateContractMetrics(contract);
+      return sum + (metrics.interestOutstanding || 0);
+    }, 0);
+
+    const nextMonthCapitalDue = activeContracts.reduce((sum, contract) => {
+      const metrics = calculateContractMetrics(contract);
+      return sum + (metrics.currentMonthlyCapital || 0);
+    }, 0);
+
+    const nextMonthInterestDue = activeContracts.reduce((sum, contract) => {
+      const metrics = calculateContractMetrics(contract);
+      return sum + (metrics.monthlyInterest || 0);
+    }, 0);
+
+    const totalActiveVehicles = activeContracts.reduce((sum, contract) => {
+      return sum + (contract.activeVehiclesCount || 0);
+    }, 0);
+
+    const totalSettledVehicles = contracts.reduce((sum, contract) => {
+      return sum + (contract.originalVehicleCount || 0) - (contract.activeVehiclesCount || 0);
+    }, 0);
+
+    return {
+      totalCapitalOutstanding,
+      totalInterestOutstanding,
+      nextMonthCapitalDue,
+      nextMonthInterestDue,
+      activeContracts: activeContracts.length,
+      settledContracts: contracts.length - activeContracts.length,
+      totalActiveVehicles,
+      totalSettledVehicles
+    };
+  };
+
+  const kpis = contracts.length > 0 ? calculateDashboardKPIs() : {
+    totalCapitalOutstanding: 0,
+    totalInterestOutstanding: 0,
+    nextMonthCapitalDue: 0,
+    nextMonthInterestDue: 0,
+    activeContracts: 0,
+    settledContracts: 0,
+    totalActiveVehicles: 0,
+    totalSettledVehicles: 0
+  };
+
+  const filteredContracts = statusFilter === 'all' 
+    ? contracts 
+    : contracts.filter(c => c.status === statusFilter);
+
   const handleSearch = async (searchTerm) => {
     if (!searchTerm) {
       setSearchResults(null);
@@ -86,11 +125,11 @@ const Dashboard = ({ onViewGantt }) => {
       alert('Search failed: ' + error.message);
     }
   };
-  
+
   const handleContractAdded = () => {
     loadContracts();
   };
-  
+
   const handleContractClick = (contract) => {
     setSelectedContract(contract);
     setIsDetailModalOpen(true);
@@ -107,7 +146,6 @@ const Dashboard = ({ onViewGantt }) => {
     setSelectedContract(null);
   };
 
-  // Format interest rate display
   const formatInterestRate = (contract) => {
     if (contract.interestType === 'variable') {
       const rate = (contract.baseRate || 0) + (contract.margin || 0);
@@ -115,7 +153,7 @@ const Dashboard = ({ onViewGantt }) => {
     }
     return 'Fixed';
   };
-  
+
   if (loading) {
     return (
       <div style={styles.loading}>
@@ -123,192 +161,170 @@ const Dashboard = ({ onViewGantt }) => {
       </div>
     );
   }
-  
+
   return (
     <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.header}>
-        <div>
-          <h1 style={styles.title}>Asset Finance Register</h1>
-          <p style={styles.subtitle}>Vehicle finance contract management</p>
+      {/* Header with Logo */}
+      <Header title="Asset Finance Register">
+  <button onClick={onViewGantt} style={styles.ganttButton}>
+    <Calendar size={18} />
+    View Timeline
+  </button>
+  <button onClick={onViewReports} style={styles.reportsButton}>
+    <BarChart3 size={18} />
+    View Reports
+  </button>
+  <button onClick={() => setIsModalOpen(true)} style={styles.addButton}>
+    <Plus size={18} />
+    Add New Contract
+  </button>
+  <button 
+    onClick={() => setIsImportModalOpen(true)} 
+    style={{...styles.addButton, background: 'linear-gradient(135deg, #059669 0%, #047857 100%)'}}
+  >
+    <Upload size={20} />
+    Import Contracts
+  </button>
+</Header>
+
+      {/* KPI Cards */}
+      <div style={styles.kpiGrid}>
+        <div style={styles.kpiCard}>
+          <div style={styles.kpiIcon}>
+            <TrendingUp size={24} />
+          </div>
+          <div style={styles.kpiContent}>
+            <div style={styles.kpiLabel}>Capital Outstanding</div>
+            <div style={styles.kpiValue}>£{((kpis.totalCapitalOutstanding || 0) / 1000).toFixed(1)}K</div>
+            <div style={styles.kpiSubtext}>+£{((kpis.totalInterestOutstanding || 0) / 1000).toFixed(2)}K interest</div>
+          </div>
         </div>
-        <div style={styles.headerButtons}>
-          <button onClick={onViewGantt} style={styles.ganttButton}>
-            <Calendar size={20} />
-            View Gantt Chart
-          </button>
-          <button onClick={() => setIsModalOpen(true)} style={styles.addButton}>
-            <Plus size={20} />
-            Add Contract
-          </button>
+
+        <div style={styles.kpiCard}>
+          <div style={styles.kpiIcon}>
+            <FileText size={24} />
+          </div>
+          <div style={styles.kpiContent}>
+            <div style={styles.kpiLabel}>Active Contracts</div>
+            <div style={styles.kpiValue}>{kpis.activeContracts || 0}</div>
+            <div style={styles.kpiSubtext}>{kpis.settledContracts || 0} settled</div>
+          </div>
+        </div>
+
+        <div style={styles.kpiCard}>
+          <div style={styles.kpiIcon}>
+            <Calendar size={24} />
+          </div>
+          <div style={styles.kpiContent}>
+            <div style={styles.kpiLabel}>Next Month Capital</div>
+            <div style={styles.kpiValue}>£{(kpis.nextMonthCapitalDue || 0).toFixed(2)}</div>
+            <div style={styles.kpiSubtext}>Capital instalments</div>
+          </div>
+        </div>
+
+        <div style={styles.kpiCard}>
+          <div style={styles.kpiIcon}>
+            <Zap size={24} />
+          </div>
+          <div style={styles.kpiContent}>
+            <div style={styles.kpiLabel}>Next Month Interest (EST)</div>
+            <div style={styles.kpiValue}>£{(kpis.nextMonthInterestDue || 0).toFixed(2)}</div>
+            <div style={styles.kpiSubtext}>Interest due</div>
+          </div>
+        </div>
+
+        <div style={styles.kpiCard}>
+          <div style={styles.kpiIcon}>
+            <Users size={24} />
+          </div>
+          <div style={styles.kpiContent}>
+            <div style={styles.kpiLabel}>Active Vehicles</div>
+            <div style={styles.kpiValue}>{kpis.totalActiveVehicles || 0}</div>
+            <div style={styles.kpiSubtext}>{kpis.totalSettledVehicles || 0} settled</div>
+          </div>
         </div>
       </div>
-      
-      {/* KPI Cards */}
-      {stats && (
-        <div style={styles.kpiGrid}>
-          <KPICard
-            title="Total Capital Outstanding"
-            value={formatCompactCurrency(stats.totalCapitalOutstanding)}
-            subtitle={`+ ${formatCurrency(stats.totalInterestOutstanding)} interest (est.)`}
-            icon={TrendingUp}
-          />
-          <KPICard
-            title="Active Contracts"
-            value={stats.totalActiveContracts.toString()}
-            subtitle={`${stats.totalSettledContracts} settled`}
-            icon={FileText}
-          />
-          <KPICard
-            title="Next Month Capital Due"
-            value={formatCurrency(stats.nextMonthCapitalDue)}
-            subtitle="Capital instalments only"
-            icon={Calendar}
-          />
-          <KPICard
-            title="Active Vehicles"
-            value={stats.totalActiveVehicles.toString()}
-            subtitle={`${stats.totalSettledVehicles} settled`}
-            icon={Users}
-          />
-        </div>
-      )}
-      
+
       {/* Search Bar */}
       <div style={styles.searchSection}>
-        <SearchBar onSearch={handleSearch} />
+        <div style={styles.searchInputContainer}>
+          <Search size={20} style={styles.searchIcon} />
+          <input
+            type="text"
+            placeholder="Search by registration or contract number..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handleSearch(searchTerm);
+              }
+            }}
+            style={styles.searchInput}
+          />
+        </div>
+        <button 
+          onClick={() => handleSearch(searchTerm)}
+          style={styles.searchButton}
+        >
+          Search
+        </button>
       </div>
-      
+
       {/* Search Results */}
       {searchResults && (
-        <div style={styles.searchResults}>
-          <div style={styles.resultsHeader}>
-            <h3 style={styles.resultsTitle}>Search Results</h3>
-            <button onClick={() => setSearchResults(null)} style={styles.closeResults}>
-              Close
+        <div style={styles.searchResultsCard}>
+          <div style={styles.searchResultsHeader}>
+            <span style={styles.searchResultsTitle}>
+              Search Results - {searchResults.type === 'vehicle' ? 'Vehicle' : 'Contract'} Found
+            </span>
+            <button 
+              onClick={() => setSearchResults(null)}
+              style={styles.clearSearchButton}
+            >
+              Clear
             </button>
           </div>
           
-          {searchResults.type === 'vehicle' && (
-            <div style={styles.vehicleResult}>
-              <h4 style={styles.resultLabel}>
-                Vehicle: {searchResults.data.vehicle.registration}
-                {searchResults.data.vehicle.make && ` - ${searchResults.data.vehicle.make} ${searchResults.data.vehicle.model}`}
-              </h4>
-              <div style={styles.resultGrid}>
-                <div style={styles.resultItem}>
-                  <span style={styles.resultKey}>Status:</span>
-                  <span style={styles.resultValue}>{searchResults.data.vehicle.status}</span>
+          {searchResults.type === 'vehicle' ? (
+            <div style={styles.resultGrid}>
+              <div style={styles.resultItem}>
+                <div style={styles.resultKey}>Registration</div>
+                <div style={styles.resultValueHighlight}>{searchResults.data.vehicle.registration}</div>
+              </div>
+              <div style={styles.resultItem}>
+                <div style={styles.resultKey}>Make/Model</div>
+                <div style={styles.resultValue}>{searchResults.data.vehicle.make}</div>
+              </div>
+              <div style={styles.resultItem}>
+                <div style={styles.resultKey}>Contract</div>
+                <div style={styles.resultValue}>{searchResults.data.contract.contractNumber}</div>
+              </div>
+              <div style={styles.resultItem}>
+                <div style={styles.resultKey}>Status</div>
+                <div style={styles.resultValue}>
+                  {searchResults.data.vehicle.settled ? 'Settled' : 'Active'}
                 </div>
-                <div style={styles.resultItem}>
-                  <span style={styles.resultKey}>Contract:</span>
-                  <span style={styles.resultValue}>{searchResults.data.contract.contractNumber}</span>
-                </div>
-                <div style={styles.resultItem}>
-                  <span style={styles.resultKey}>Interest Type:</span>
-                  <span style={styles.resultValue}>
-                    {formatInterestRate(searchResults.data.contract)}
-                    {searchResults.data.contract.interestType === 'variable' && (
-                      <Zap size={14} color="#F59E0B" style={{ marginLeft: '4px', verticalAlign: 'middle' }} />
-                    )}
-                  </span>
-                </div>
-                <div style={styles.resultItem}>
-                  <span style={styles.resultKey}>Monthly Capital (this vehicle):</span>
-                  <span style={styles.resultValue}>
-                    {formatCurrency(searchResults.data.metrics.vehicleMonthlyCapital)}
-                  </span>
-                </div>
-                <div style={styles.resultItem}>
-                  <span style={styles.resultKey}>Months Remaining:</span>
-                  <span style={styles.resultValue}>{searchResults.data.metrics.monthsRemaining}</span>
-                </div>
-                <div style={styles.resultItem}>
-                  <span style={styles.resultKey}>Capital Outstanding:</span>
-                  <span style={styles.resultValueHighlight}>
-                    {formatCurrency(searchResults.data.metrics.vehicleCapitalOutstanding)}
-                  </span>
-                </div>
-                {searchResults.data.contract.interestType === 'variable' && (
-                  <div style={styles.resultItem}>
-                    <span style={styles.resultKey}>Effective Rate:</span>
-                    <span style={styles.resultValue}>
-                      {((searchResults.data.contract.baseRate || 0) + (searchResults.data.contract.margin || 0)).toFixed(2)}%
-                      <div style={{ fontSize: '11px', color: '#718096', marginTop: '2px' }}>
-                        Base: {(searchResults.data.contract.baseRate || 0).toFixed(2)}% + Margin: {(searchResults.data.contract.margin || 0).toFixed(2)}%
-                      </div>
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
-          )}
-          
-          {searchResults.type === 'contract' && (
-            <div style={styles.contractResult}>
-              <h4 style={styles.resultLabel}>
-                Contract: {searchResults.data.contractNumber}
-                {searchResults.data.interestType === 'variable' && (
-                  <span style={styles.variableBadge}>
-                    <Zap size={14} />
-                    Variable Interest
-                  </span>
-                )}
-              </h4>
-              <div style={styles.resultGrid}>
-                <div style={styles.resultItem}>
-                  <span style={styles.resultKey}>Status:</span>
-                  <span style={styles.resultValue}>{searchResults.data.status}</span>
-                </div>
-                <div style={styles.resultItem}>
-                  <span style={styles.resultKey}>Active Vehicles:</span>
-                  <span style={styles.resultValue}>
-                    {searchResults.data.activeVehiclesCount} of {searchResults.data.originalVehicleCount}
-                  </span>
-                </div>
-                <div style={styles.resultItem}>
-                  <span style={styles.resultKey}>Monthly Capital Instalment:</span>
-                  <span style={styles.resultValue}>
-                    {formatCurrency(searchResults.data.currentMonthlyCapital)}
-                  </span>
-                </div>
-                {searchResults.data.interestType === 'variable' && (
-                  <>
-                    <div style={styles.resultItem}>
-                      <span style={styles.resultKey}>Interest Type:</span>
-                      <span style={styles.resultValue}>
-                        Variable Rate
-                      </span>
-                    </div>
-                    <div style={styles.resultItem}>
-                      <span style={styles.resultKey}>Effective Rate:</span>
-                      <span style={styles.resultValue}>
-                        {((searchResults.data.baseRate || 0) + (searchResults.data.margin || 0)).toFixed(2)}%
-                        <div style={{ fontSize: '11px', color: '#718096', marginTop: '2px' }}>
-                          {(searchResults.data.baseRate || 0).toFixed(2)}% + {(searchResults.data.margin || 0).toFixed(2)}%
-                        </div>
-                      </span>
-                    </div>
-                    <div style={styles.resultItem}>
-                      <span style={styles.resultKey}>Interest Calculation:</span>
-                      <span style={styles.resultValueNote}>
-                        Calculated daily on outstanding balance
-                      </span>
-                    </div>
-                  </>
-                )}
-                {searchResults.data.interestType === 'fixed' && (
-                  <div style={styles.resultItem}>
-                    <span style={styles.resultKey}>Interest Type:</span>
-                    <span style={styles.resultValue}>Fixed</span>
-                  </div>
-                )}
+          ) : (
+            <div style={styles.resultGrid}>
+              <div style={styles.resultItem}>
+                <div style={styles.resultKey}>Contract Number</div>
+                <div style={styles.resultValueHighlight}>{searchResults.data.contractNumber}</div>
+              </div>
+              <div style={styles.resultItem}>
+                <div style={styles.resultKey}>Vehicles</div>
+                <div style={styles.resultValue}>{searchResults.data.vehicles?.length || 0}</div>
+              </div>
+              <div style={styles.resultItem}>
+                <div style={styles.resultKey}>Status</div>
+                <div style={styles.resultValue}>{searchResults.data.status}</div>
               </div>
             </div>
           )}
         </div>
       )}
-      
+
       {/* Filter Tabs */}
       <div style={styles.filterTabs}>
         <button
@@ -339,9 +355,122 @@ const Dashboard = ({ onViewGantt }) => {
           Settled ({contracts.filter(c => c.status === 'settled').length})
         </button>
       </div>
-      
-      {/* Contracts Table */}
-      <ContractTable contracts={filteredContracts} onContractClick={handleContractClick} />
+
+      {/* Contracts List */}
+      <div style={styles.contractsContainer}>
+        <div style={styles.contractsHeader}>
+          <h2 style={styles.contractsTitle}>
+            {statusFilter === 'all' ? 'All Contracts' : statusFilter === 'active' ? 'Active Contracts' : 'Settled Contracts'}
+          </h2>
+          <div style={styles.contractCount}>
+            {filteredContracts.length} {filteredContracts.length === 1 ? 'contract' : 'contracts'}
+          </div>
+        </div>
+
+        {filteredContracts.length === 0 ? (
+          <div style={styles.emptyState}>
+            <div style={styles.emptyIcon}>📋</div>
+            <div style={styles.emptyTitle}>No contracts found</div>
+            <div style={styles.emptyText}>
+              {statusFilter !== 'all' ? `No ${statusFilter} contracts` : 'Start by adding a new contract'}
+            </div>
+          </div>
+        ) : (
+          <div>
+            {filteredContracts.map(contract => {
+              const metrics = calculateContractMetrics(contract);
+              
+              return (
+                <div 
+                  key={contract.id}
+                  onClick={() => handleContractClick(contract)}
+                  style={styles.contractRow}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateX(4px)';
+                    e.currentTarget.style.boxShadow = '0 8px 24px -4px rgba(75, 109, 139, 0.2), 0 4px 8px -2px rgba(0, 0, 0, 0.05)';
+                    e.currentTarget.style.borderColor = '#4B6D8B';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateX(0)';
+                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.04)';
+                    e.currentTarget.style.borderColor = '#E2E8F0';
+                  }}>
+                  
+                  {/* Accent line */}
+                  <div style={{
+                    ...styles.accentLine,
+                    background: contract.status === 'active' 
+                      ? 'linear-gradient(180deg, #4B6D8B, #6B8CAE)' 
+                      : 'linear-gradient(180deg, #9CA3AF, #D1D5DB)'
+                  }} />
+
+                  {/* Contract Info */}
+                  <div style={styles.contractInfo}>
+                    <div style={styles.contractHeader}>
+                      <div>
+                        <div style={styles.contractNumber}>{contract.contractNumber}</div>
+                        <div style={styles.contractMake}>{contract.vehicles?.[0]?.make || 'N/A'} {contract.vehicles?.length > 1 ? `+${contract.vehicles.length - 1}` : ''}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Vehicles Count */}
+                  <div style={styles.contractMetric}>
+                    <div style={styles.metricLabel}>VEHICLES</div>
+                    <div style={styles.metricValue}>
+                      {contract.activeVehiclesCount || 0}
+                      <span style={styles.metricTotal}>/{contract.originalVehicleCount || 0}</span>
+                    </div>
+                  </div>
+
+                  {/* Monthly Capital */}
+                  <div style={styles.contractMetric}>
+                    <div style={styles.metricLabel}>MONTHLY CAPITAL</div>
+                    <div style={styles.metricValueHighlight}>£{(metrics.currentMonthlyCapital || 0).toFixed(2)}</div>
+                    <div style={styles.metricSubtext}>+£{(metrics.monthlyInterest || 0).toFixed(2)} int.</div>
+                  </div>
+
+                  {/* Outstanding */}
+                  <div style={styles.contractMetric}>
+                    <div style={styles.metricLabel}>OUTSTANDING</div>
+                    <div style={styles.metricValueHighlight}>£{((metrics.capitalOutstanding || 0) / 1000).toFixed(1)}K</div>
+                    <div style={styles.metricSubtext}>{metrics.monthsRemaining || 0} months</div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div style={styles.contractProgress}>
+                    <div style={styles.progressBar}>
+                      <div style={{
+                        ...styles.progressFill,
+                        width: `${metrics.progress || 0}%`
+                      }} />
+                    </div>
+                    <div style={styles.progressText}>{Math.round(metrics.progress || 0)}%</div>
+                  </div>
+
+                  {/* Status Badges */}
+                  <div style={styles.contractBadges}>
+                    <div style={styles.badgesContainer}>
+                      <div style={{
+                        ...styles.statusBadge,
+                        ...(contract.status === 'active' ? styles.statusBadgeActive : styles.statusBadgeSettled)
+                      }}>
+                        {contract.status}
+                      </div>
+                      {contract.interestType === 'variable' && (
+                        <div style={styles.variableTypeBadge}>
+                          <Zap size={10} />
+                          VAR
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
       
       {/* Contract Modal */}
       <ContractModal
@@ -351,139 +480,205 @@ const Dashboard = ({ onViewGantt }) => {
       />
 
       {/* Contract Detail Modal */}
-      <ContractDetailModal
-        contract={selectedContract}
-        isOpen={isDetailModalOpen}
-        onClose={handleDetailModalClose}
-        onUpdate={handleDetailModalUpdate}
-      />
+      {isDetailModalOpen && selectedContract && (
+        <ContractDetailModal
+          contract={selectedContract}
+          isOpen={isDetailModalOpen}
+          onClose={handleDetailModalClose}
+          onUpdate={handleDetailModalUpdate}
+        />
+      )}
+
+      {/* Import Modal */}
+      {isImportModalOpen && (
+        <ContractImportModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          onImportComplete={() => {
+            setIsImportModalOpen(false);
+            loadContracts();
+          }}
+        />
+      )}
     </div>
   );
 };
 
 const styles = {
   container: {
-    maxWidth: '1400px',
-    margin: '0 auto',
-    padding: '32px',
-    minHeight: '100vh'
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '32px'
-  },
-  title: {
-    fontSize: '32px',
-    fontWeight: '700',
-    color: '#1A202C',
-    marginBottom: '4px'
-  },
-  subtitle: {
-    fontSize: '16px',
-    color: '#718096'
-  },
-  headerButtons: {
-    display: 'flex',
-    gap: '12px'
+    width: '100%',
+    margin: '0',
+    padding: '40px 60px',
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 50%, #F1F5F9 100%)'
   },
   ganttButton: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    padding: '12px 24px',
-    background: '#10B981',
+    gap: '10px',
+    padding: '16px 28px',
+    background: 'white',
+    color: '#4B6D8B',
+    border: '2px solid #E2E8F0',
+    borderRadius: '14px',
+    fontSize: '15px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)'
+  },
+  reportsButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '16px 28px',
+    background: 'linear-gradient(135deg, #8B5CF6, #A78BFA)',
     color: 'white',
     border: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: '14px',
+    fontSize: '15px',
+    fontWeight: '700',
     cursor: 'pointer',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s',
+    boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)'
   },
   addButton: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    padding: '12px 24px',
-    background: '#3182CE',
+    gap: '10px',
+    padding: '16px 28px',
+    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
     color: 'white',
     border: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: '14px',
+    fontSize: '15px',
+    fontWeight: '700',
     cursor: 'pointer',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s',
+    boxShadow: '0 4px 12px rgba(75, 109, 139, 0.3)'
   },
   kpiGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
     gap: '20px',
     marginBottom: '32px'
   },
-  searchSection: {
-    marginBottom: '24px'
-  },
-  searchResults: {
+  kpiCard: {
+    display: 'flex',
+    gap: '20px',
+    padding: '28px',
     background: 'white',
-    borderRadius: '8px',
-    padding: '24px',
-    marginBottom: '24px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-    border: '2px solid #3182CE'
+    borderRadius: '18px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+    border: '1px solid rgba(0, 0, 0, 0.02)',
+    transition: 'all 0.3s'
   },
-  resultsHeader: {
+  kpiIcon: {
+    width: '56px',
+    height: '56px',
+    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
+    borderRadius: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    flexShrink: 0
+  },
+  kpiContent: {
+    flex: 1
+  },
+  kpiLabel: {
+    fontSize: '12px',
+    color: '#94A3B8',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+    marginBottom: '6px'
+  },
+  kpiValue: {
+    fontSize: '32px',
+    fontWeight: '800',
+    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    marginBottom: '4px',
+    lineHeight: '1'
+  },
+  kpiSubtext: {
+    fontSize: '13px',
+    color: '#64748B',
+    fontWeight: '600'
+  },
+  searchSection: {
+    display: 'flex',
+    gap: '14px',
+    marginBottom: '32px'
+  },
+  searchInputContainer: {
+    flex: 1,
+    position: 'relative'
+  },
+  searchIcon: {
+    position: 'absolute',
+    left: '20px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: '#94A3B8',
+    pointerEvents: 'none'
+  },
+  searchInput: {
+    width: '100%',
+    padding: '18px 20px 18px 52px',
+    fontSize: '15px',
+    border: '2px solid #E2E8F0',
+    borderRadius: '14px',
+    outline: 'none',
+    transition: 'all 0.2s',
+    background: 'white',
+    fontWeight: '500',
+    color: '#0F172A'
+  },
+  searchButton: {
+    padding: '18px 36px',
+    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '14px',
+    fontSize: '15px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    boxShadow: '0 4px 12px rgba(75, 109, 139, 0.3)'
+  },
+  searchResultsCard: {
+    background: 'white',
+    padding: '28px',
+    borderRadius: '18px',
+    marginBottom: '32px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+    border: '2px solid #4B6D8B'
+  },
+  searchResultsHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '16px'
+    marginBottom: '20px'
   },
-  resultsTitle: {
+  searchResultsTitle: {
     fontSize: '18px',
-    fontWeight: '600',
-    color: '#1A202C'
+    fontWeight: '700',
+    color: '#4B6D8B'
   },
-  closeResults: {
-    padding: '8px 16px',
-    background: '#EDF2F7',
+  clearSearchButton: {
+    padding: '8px 18px',
+    background: '#F1F5F9',
     border: 'none',
-    borderRadius: '6px',
+    borderRadius: '10px',
+    fontSize: '13px',
+    fontWeight: '700',
+    color: '#64748B',
     cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#4A5568'
-  },
-  vehicleResult: {
-    padding: '16px',
-    background: '#F7FAFC',
-    borderRadius: '6px'
-  },
-  contractResult: {
-    padding: '16px',
-    background: '#F7FAFC',
-    borderRadius: '6px'
-  },
-  resultLabel: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#1A202C',
-    marginBottom: '16px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px'
-  },
-  variableBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '4px',
-    padding: '4px 10px',
-    background: '#FEF3C7',
-    color: '#92400E',
-    borderRadius: '12px',
-    fontSize: '12px',
-    fontWeight: '600',
-    marginLeft: '8px'
+    transition: 'all 0.2s'
   },
   resultGrid: {
     display: 'grid',
@@ -498,54 +693,241 @@ const styles = {
   resultKey: {
     fontSize: '12px',
     color: '#718096',
-    fontWeight: '500'
+    fontWeight: '600'
   },
   resultValue: {
     fontSize: '16px',
-    color: '#1A202C',
-    fontWeight: '600'
+    color: '#0F172A',
+    fontWeight: '700'
   },
   resultValueHighlight: {
     fontSize: '20px',
-    color: '#3182CE',
+    color: '#4B6D8B',
     fontWeight: '700'
-  },
-  resultValueNote: {
-    fontSize: '13px',
-    color: '#4A5568',
-    fontWeight: '500',
-    fontStyle: 'italic'
   },
   filterTabs: {
     display: 'flex',
-    gap: '8px',
-    marginBottom: '16px'
+    gap: '12px',
+    marginBottom: '24px',
+    padding: '6px',
+    background: 'white',
+    borderRadius: '16px',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.02)',
+    width: 'fit-content'
   },
   tab: {
-    padding: '10px 20px',
-    background: 'white',
-    border: '1px solid #E2E8F0',
-    borderRadius: '6px',
+    padding: '12px 24px',
+    background: 'transparent',
+    border: 'none',
+    borderRadius: '12px',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '600',
-    color: '#4A5568',
-    transition: 'all 0.2s'
+    color: '#64748B',
+    transition: 'all 0.2s',
+    textTransform: 'capitalize'
   },
   tabActive: {
-    background: '#3182CE',
+    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
     color: 'white',
-    borderColor: '#3182CE'
+    boxShadow: '0 4px 12px rgba(75, 109, 139, 0.3)'
+  },
+  contractsContainer: {
+    background: 'white',
+    borderRadius: '20px',
+    padding: '32px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+    border: '1px solid rgba(0, 0, 0, 0.02)'
+  },
+  contractsHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '28px'
+  },
+  contractsTitle: {
+    fontSize: '22px',
+    fontWeight: '700',
+    color: '#0F172A',
+    letterSpacing: '-0.5px'
+  },
+  contractCount: {
+    fontSize: '14px',
+    color: '#64748B',
+    fontWeight: '600',
+    padding: '8px 18px',
+    background: '#F1F5F9',
+    borderRadius: '10px'
+  },
+  emptyState: {
+    textAlign: 'center',
+    padding: '80px 20px'
+  },
+  emptyIcon: {
+    fontSize: '64px',
+    marginBottom: '16px'
+  },
+  emptyTitle: {
+    fontSize: '20px',
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: '8px'
+  },
+  emptyText: {
+    fontSize: '15px',
+    color: '#64748B',
+    fontWeight: '500'
+  },
+  contractRow: {
+    display: 'grid',
+    gridTemplateColumns: '4px 2fr 1fr 1.5fr 1.5fr 1.5fr 1fr',
+    alignItems: 'center',
+    gap: '24px',
+    padding: '24px',
+    marginBottom: '16px',
+    background: 'white',
+    border: '2px solid #E2E8F0',
+    borderRadius: '16px',
+    cursor: 'pointer',
+    transition: 'all 0.3s',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+  },
+  accentLine: {
+    width: '4px',
+    height: '60px',
+    borderRadius: '999px'
+  },
+  contractInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px'
+  },
+  contractHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start'
+  },
+  contractNumber: {
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: '4px'
+  },
+  contractMake: {
+    fontSize: '14px',
+    color: '#64748B',
+    fontWeight: '600'
+  },
+  contractMetric: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px'
+  },
+  metricLabel: {
+    fontSize: '10px',
+    color: '#94A3B8',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  metricValue: {
+    fontSize: '17px',
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: '2px'
+  },
+  metricTotal: {
+    fontSize: '13px',
+    color: '#94A3B8',
+    fontWeight: '600'
+  },
+  metricSubtext: {
+    fontSize: '11px',
+    color: '#64748B',
+    fontWeight: '500'
+  },
+  metricValueHighlight: {
+    fontSize: '17px',
+    fontWeight: '700',
+    color: '#4B6D8B',
+    marginBottom: '2px'
+  },
+  contractProgress: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px'
+  },
+  progressBar: {
+    width: '100%',
+    height: '8px',
+    background: '#E2E8F0',
+    borderRadius: '999px',
+    overflow: 'hidden',
+    marginBottom: '6px'
+  },
+  progressFill: {
+    height: '100%',
+    background: 'linear-gradient(90deg, #4B6D8B, #6B8CAE)',
+    borderRadius: '999px',
+    transition: 'width 0.3s'
+  },
+  progressText: {
+    fontSize: '11px',
+    color: '#4B6D8B',
+    fontWeight: '700',
+    textAlign: 'center'
+  },
+  contractBadges: {
+    display: 'flex',
+    justifyContent: 'flex-end'
+  },
+  badgesContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    alignItems: 'flex-end'
+  },
+  statusBadge: {
+    padding: '6px 12px',
+    borderRadius: '8px',
+    fontSize: '11px',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  statusBadgeActive: {
+    background: 'linear-gradient(135deg, #DCFCE7, #BBF7D0)',
+    color: '#166534',
+    border: '1px solid #86EFAC'
+  },
+  statusBadgeSettled: {
+    background: 'linear-gradient(135deg, #F1F5F9, #E2E8F0)',
+    color: '#475569',
+    border: '1px solid #CBD5E1'
+  },
+  variableTypeBadge: {
+    padding: '4px 10px',
+    background: 'linear-gradient(135deg, #FEF3C7, #FDE68A)',
+    borderRadius: '6px',
+    fontSize: '10px',
+    fontWeight: '700',
+    color: '#92400E',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '3px',
+    border: '1px solid #FCD34D'
   },
   loading: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: '100vh'
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 50%, #F1F5F9 100%)'
   },
   loadingText: {
     fontSize: '18px',
-    color: '#718096'
+    color: '#64748B',
+    fontWeight: '600'
   }
 };
 

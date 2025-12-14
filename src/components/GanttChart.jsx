@@ -5,6 +5,7 @@ import { calculateContractMetrics } from '../services/calculationService.js';
 import { formatMonthYear } from '../utils/dateHelpers.js';
 import { formatCurrency } from '../utils/currencyHelpers.js';
 import { addMonths, parseISO, format } from 'date-fns';
+import Header from './Header.jsx';
 
 const GanttChart = ({ onBack }) => {
   const [contracts, setContracts] = useState([]);
@@ -21,14 +22,12 @@ const GanttChart = ({ onBack }) => {
       const data = await getAllContracts();
       const activeContracts = data.filter(c => c.status === 'active');
       
-      // Sort by start date (earliest first)
       activeContracts.sort((a, b) => 
         new Date(a.firstInstalmentDate) - new Date(b.firstInstalmentDate)
       );
       
       setContracts(activeContracts);
       
-      // Generate month columns
       if (activeContracts.length > 0) {
         const monthsArray = generateMonthColumns(activeContracts);
         setMonths(monthsArray);
@@ -42,52 +41,44 @@ const GanttChart = ({ onBack }) => {
   };
 
   const generateMonthColumns = (contracts) => {
-    // Find earliest start date and latest end date
     let earliestDate = new Date();
     let latestDate = new Date();
     
     contracts.forEach(contract => {
-      const startDate = parseISO(contract.firstInstalmentDate);
-      const endDate = addMonths(startDate, contract.totalInstalments);
+      const start = parseISO(contract.firstInstalmentDate);
+      const end = addMonths(start, contract.totalInstalments - 1);
       
-      if (startDate < earliestDate) earliestDate = startDate;
-      if (endDate > latestDate) latestDate = endDate;
+      if (start < earliestDate) earliestDate = start;
+      if (end > latestDate) latestDate = end;
     });
     
-    // Generate array of months
     const monthsArray = [];
-    let currentDate = new Date(earliestDate.getFullYear(), earliestDate.getMonth(), 1);
+    let currentMonth = new Date(earliestDate.getFullYear(), earliestDate.getMonth(), 1);
     const endMonth = new Date(latestDate.getFullYear(), latestDate.getMonth(), 1);
     
-    while (currentDate <= endMonth) {
-      monthsArray.push({
-        date: new Date(currentDate),
-        label: format(currentDate, 'MMM yy')
-      });
-      currentDate = addMonths(currentDate, 1);
+    while (currentMonth <= endMonth) {
+      monthsArray.push(new Date(currentMonth));
+      currentMonth = addMonths(currentMonth, 1);
     }
     
     return monthsArray;
   };
 
   const getCapitalForMonth = (contract, monthDate) => {
-    const startDate = parseISO(contract.firstInstalmentDate);
-    const endDate = addMonths(startDate, contract.totalInstalments);
+    const contractStart = parseISO(contract.firstInstalmentDate);
+    const contractEnd = addMonths(contractStart, contract.totalInstalments - 1);
     
-    // Check if this month is within the contract period
     const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
     const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
     
-    if (monthEnd < startDate || monthStart > endDate) {
-      return null; // Contract not active this month
+    if (monthEnd < contractStart || monthStart > contractEnd) {
+      return null;
     }
     
-    // Calculate which month number this is in the contract
     const monthsSinceStart = Math.floor(
-      (monthStart - startDate) / (30.44 * 24 * 60 * 60 * 1000)
+      (monthDate.getTime() - contractStart.getTime()) / (30.44 * 24 * 60 * 60 * 1000)
     );
     
-    // Check if any vehicles were settled before/during this month
     let activeVehicles = contract.originalVehicleCount;
     
     contract.vehicles.forEach(vehicle => {
@@ -96,7 +87,6 @@ const GanttChart = ({ onBack }) => {
       }
     });
     
-    // Calculate capital for this month
     const capital = contract.perVehicleCapitalRate * activeVehicles;
     
     return {
@@ -129,10 +119,12 @@ const GanttChart = ({ onBack }) => {
   if (contracts.length === 0) {
     return (
       <div style={styles.container}>
-        <button onClick={onBack} style={styles.backButton}>
-          <ArrowLeft size={20} />
-          Back to Dashboard
-        </button>
+        <Header title="Timeline View">
+          <button onClick={onBack} style={styles.backButton}>
+            <ArrowLeft size={20} />
+            Back to Dashboard
+          </button>
+        </Header>
         <div style={styles.empty}>
           <p>No active contracts to display</p>
         </div>
@@ -142,16 +134,12 @@ const GanttChart = ({ onBack }) => {
 
   return (
     <div style={styles.container}>
-      <div style={styles.header}>
+      <Header title="Timeline View">
         <button onClick={onBack} style={styles.backButton}>
           <ArrowLeft size={20} />
           Back to Dashboard
         </button>
-        <div>
-          <h1 style={styles.title}>Gantt Chart View</h1>
-          <p style={styles.subtitle}>Contract timeline and monthly capital instalments</p>
-        </div>
-      </div>
+      </Header>
 
       <div style={styles.tableWrapper}>
         <div style={styles.tableContainer}>
@@ -161,7 +149,7 @@ const GanttChart = ({ onBack }) => {
                 <th style={styles.stickyHeader}>Contract</th>
                 {months.map((month, index) => (
                   <th key={index} style={styles.monthHeader}>
-                    {month.label}
+                    {format(month, 'MMM yy')}
                   </th>
                 ))}
               </tr>
@@ -176,25 +164,22 @@ const GanttChart = ({ onBack }) => {
                       <div style={styles.contractInfo}>
                         <div style={styles.contractNumber}>{contract.contractNumber}</div>
                         <div style={styles.vehicleInfo}>
-                          {contract.activeVehiclesCount}v of {contract.originalVehicleCount}v
+                          {contract.vehicles?.[0]?.make} {contract.vehicles?.length > 1 ? `+${contract.vehicles.length - 1}` : ''}
                         </div>
                       </div>
                     </td>
                     {months.map((month, index) => {
-                      const monthData = getCapitalForMonth(contract, month.date);
+                      const monthData = getCapitalForMonth(contract, month);
                       
                       return (
                         <td key={index} style={styles.cell}>
                           {monthData ? (
-                            <div
-                              style={{
-                                ...styles.cellContent,
-                                ...(monthData.isPast ? styles.cellPast : {}),
-                                ...(monthData.isCurrent ? styles.cellCurrent : {}),
-                                ...(!monthData.isPast && !monthData.isCurrent ? styles.cellFuture : {})
-                              }}
-                              title={`${contract.contractNumber}: ${formatCurrency(monthData.capital)} (${monthData.activeVehicles} vehicles)`}
-                            >
+                            <div style={{
+                              ...styles.cellContent,
+                              ...(monthData.isPast ? styles.cellPast : 
+                                  monthData.isCurrent ? styles.cellCurrent : 
+                                  styles.cellFuture)
+                            }}>
                               {formatCurrency(monthData.capital, false)}
                             </div>
                           ) : (
@@ -206,14 +191,13 @@ const GanttChart = ({ onBack }) => {
                   </tr>
                 );
               })}
-              
-              {/* TOTAL ROW */}
+
               <tr style={styles.totalRow}>
                 <td style={styles.stickyCellTotal}>
-                  <div style={styles.totalLabel}>TOTAL CAPITAL</div>
+                  <div style={styles.totalLabel}>Monthly Total</div>
                 </td>
                 {months.map((month, index) => {
-                  const total = calculateMonthTotal(month.date);
+                  const total = calculateMonthTotal(month);
                   
                   return (
                     <td key={index} style={styles.cellTotal}>
@@ -233,7 +217,6 @@ const GanttChart = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Legend */}
       <div style={styles.legend}>
         <div style={styles.legendTitle}>Legend:</div>
         <div style={styles.legendItems}>
@@ -257,42 +240,32 @@ const GanttChart = ({ onBack }) => {
 
 const styles = {
   container: {
-    maxWidth: '100%',
-    margin: '0 auto',
-    padding: '32px',
-    minHeight: '100vh'
-  },
-  header: {
-    marginBottom: '32px'
+    width: '100%',
+    margin: '0',
+    padding: '40px 60px',
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 50%, #F1F5F9 100%)'
   },
   backButton: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    padding: '10px 16px',
-    background: '#EDF2F7',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#4A5568',
-    marginBottom: '16px'
-  },
-  title: {
-    fontSize: '32px',
+    gap: '10px',
+    padding: '16px 28px',
+    background: 'white',
+    color: '#4B6D8B',
+    border: '2px solid #E2E8F0',
+    borderRadius: '14px',
+    fontSize: '15px',
     fontWeight: '700',
-    color: '#1A202C',
-    marginBottom: '4px'
-  },
-  subtitle: {
-    fontSize: '16px',
-    color: '#718096'
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)'
   },
   tableWrapper: {
     background: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    borderRadius: '20px',
+    padding: '0',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
     overflow: 'hidden'
   },
   tableContainer: {
@@ -310,14 +283,14 @@ const styles = {
     top: 0,
     left: 0,
     zIndex: 30,
-    background: '#2D3748',
+    background: '#4B6D8B',
     color: 'white',
     padding: '12px 16px',
     textAlign: 'left',
     fontWeight: '700',
     fontSize: '12px',
     textTransform: 'uppercase',
-    borderRight: '2px solid #1A202C',
+    borderRight: '2px solid #3A5A73',
     minWidth: '150px',
     maxWidth: '150px'
   },
@@ -325,14 +298,14 @@ const styles = {
     position: 'sticky',
     top: 0,
     zIndex: 20,
-    background: '#2D3748',
+    background: '#4B6D8B',
     color: 'white',
     padding: '12px 8px',
     textAlign: 'center',
     fontWeight: '700',
     fontSize: '11px',
     textTransform: 'uppercase',
-    borderRight: '1px solid #4A5568',
+    borderRight: '1px solid #5A7C95',
     minWidth: '100px'
   },
   row: {
@@ -397,15 +370,15 @@ const styles = {
     bottom: 0,
     zIndex: 15,
     background: '#F7FAFC',
-    borderTop: '3px solid #2D3748'
+    borderTop: '3px solid #4B6D8B'
   },
   stickyCellTotal: {
     position: 'sticky',
     left: 0,
     zIndex: 20,
-    background: '#2D3748',
+    background: '#4B6D8B',
     padding: '12px 16px',
-    borderRight: '2px solid #1A202C'
+    borderRight: '2px solid #3A5A73'
   },
   totalLabel: {
     fontWeight: '700',
@@ -429,13 +402,13 @@ const styles = {
   },
   legend: {
     marginTop: '24px',
-    padding: '16px',
+    padding: '20px',
     background: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+    borderRadius: '16px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
   },
   legendTitle: {
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: '14px',
     marginBottom: '12px',
     color: '#1A202C'
@@ -461,19 +434,22 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: '100vh'
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 50%, #F1F5F9 100%)'
   },
   loadingText: {
     fontSize: '18px',
-    color: '#718096'
+    color: '#64748B',
+    fontWeight: '600'
   },
   empty: {
     background: 'white',
-    borderRadius: '8px',
-    padding: '40px',
+    borderRadius: '20px',
+    padding: '60px',
     textAlign: 'center',
-    color: '#A0AEC0',
-    fontSize: '14px'
+    color: '#94A3B8',
+    fontSize: '16px',
+    fontWeight: '500'
   }
 };
 
