@@ -13,7 +13,7 @@ const INITIAL_FORM_STATE = {
   margin: '',
   totalInstalments: '',
   firstInstalmentDate: '',
-  vehicles: [{ registration: '', make: '', model: '' }]
+  vehicles: [{ registration: '', make: '', model: '', netPrice: '', grossPrice: '' }]
 };
 
 export const useContractForm = (onSuccess, onClose) => {
@@ -27,13 +27,25 @@ export const useContractForm = (onSuccess, onClose) => {
     setError('');
   };
 
-  // Handle vehicle field changes
-  const handleVehicleChange = (index, field, value) => {
+  // Handle vehicle field changes - supports single field or multiple fields
+  const handleVehicleChange = (index, fieldOrFields, value) => {
     const newVehicles = [...formData.vehicles];
-    newVehicles[index] = {
-      ...newVehicles[index],
-      [field]: field === 'registration' ? value.toUpperCase() : value
-    };
+    
+    // Check if fieldOrFields is an object (multiple fields) or string (single field)
+    if (typeof fieldOrFields === 'object') {
+      // Multiple fields passed as an object like { netPrice: '100', grossPrice: '120' }
+      newVehicles[index] = {
+        ...newVehicles[index],
+        ...fieldOrFields
+      };
+    } else {
+      // Single field passed
+      newVehicles[index] = {
+        ...newVehicles[index],
+        [fieldOrFields]: fieldOrFields === 'registration' ? value.toUpperCase() : value
+      };
+    }
+    
     setFormData(prev => ({ ...prev, vehicles: newVehicles }));
   };
 
@@ -41,7 +53,7 @@ export const useContractForm = (onSuccess, onClose) => {
   const addVehicleField = () => {
     setFormData(prev => ({
       ...prev,
-      vehicles: [...prev.vehicles, { registration: '', make: '', model: '' }]
+      vehicles: [...prev.vehicles, { registration: '', make: '', model: '', netPrice: '', grossPrice: '' }]
     }));
   };
 
@@ -124,7 +136,9 @@ export const useContractForm = (onSuccess, onClose) => {
       vehicles: validVehicles.map(v => ({
         registration: v.registration.trim(),
         make: v.make.trim(),
-        model: v.model.trim()
+        model: v.model.trim(),
+        netPrice: parseFloat(v.netPrice) || 0,
+        grossPrice: parseFloat(v.grossPrice) || 0
       }))
     };
 

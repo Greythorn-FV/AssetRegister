@@ -1,10 +1,11 @@
 // File: src/components/ContractDetailModal.jsx
-// Updated with Greythorn colors and larger modal size
+// Updated with Statement of Account Modal integration
 
 import React from 'react';
 import { X } from 'lucide-react';
 import RateChangeModal from './RateChangeModal.jsx';
 import SettlementImpactModal from './SettlementImpactModal.jsx';
+import StatementOfAccountModal from './StatementOfAccountModal.jsx'; // NEW
 import ContractViewSection from './ContractDetail/ContractViewSection.jsx';
 import ContractEditSection from './ContractDetail/ContractEditSection.jsx';
 import { useContractDetail } from '../hooks/useContractDetail.js';
@@ -19,6 +20,7 @@ const ContractDetailModal = ({ contract, isOpen, onClose, onUpdate }) => {
     isRateChangeModalOpen,
     isSettlementImpactOpen,
     selectedVehicleForSettlement,
+    isStatementModalOpen, // NEW
     handleEditClick,
     handleCancelEdit,
     handleVehicleEditChange,
@@ -31,6 +33,8 @@ const ContractDetailModal = ({ contract, isOpen, onClose, onUpdate }) => {
     closeRateChangeModal,
     handleRateChangeSuccess,
     closeSettlementImpactModal,
+    openStatementModal, // NEW
+    closeStatementModal, // NEW
     setEditData
   } = useContractDetail(contract, onUpdate, onClose);
 
@@ -87,6 +91,7 @@ const ContractDetailModal = ({ contract, isOpen, onClose, onUpdate }) => {
               onSettleVehicle={handleQuickSettleVehicle}
               onSettleVehicleWithImpact={handleSettleVehicleClick}
               onUpdateRate={openRateChangeModal}
+              onViewStatement={openStatementModal} // NEW
             />
           ) : (
             <ContractEditSection
@@ -101,6 +106,7 @@ const ContractDetailModal = ({ contract, isOpen, onClose, onUpdate }) => {
         </div>
       </div>
 
+      {/* Modals */}
       {contract.interestType === 'variable' && (
         <>
           <RateChangeModal
@@ -118,6 +124,13 @@ const ContractDetailModal = ({ contract, isOpen, onClose, onUpdate }) => {
           />
         </>
       )}
+
+      {/* NEW: Statement of Account Modal */}
+      <StatementOfAccountModal
+        contract={contract}
+        isOpen={isStatementModalOpen}
+        onClose={closeStatementModal}
+      />
     </div>
   );
 };
@@ -186,17 +199,17 @@ const styles = {
     color: 'rgba(255, 255, 255, 0.95)',
     fontWeight: '600',
     background: 'rgba(255, 255, 255, 0.15)',
-    padding: '6px 16px',
-    borderRadius: '20px',
+    padding: '6px 14px',
+    borderRadius: '8px',
     backdropFilter: 'blur(10px)'
   },
   statusPill: {
     fontSize: '13px',
-    fontWeight: '600',
+    fontWeight: '700',
     padding: '6px 14px',
-    borderRadius: '20px',
-    textTransform: 'capitalize',
-    letterSpacing: '0.02em'
+    borderRadius: '8px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
   },
   statusActive: {
     background: 'rgba(16, 185, 129, 0.2)',
@@ -205,45 +218,46 @@ const styles = {
   },
   statusSettled: {
     background: 'rgba(255, 255, 255, 0.2)',
-    color: 'white',
+    color: 'rgba(255, 255, 255, 0.9)',
     border: '1px solid rgba(255, 255, 255, 0.3)'
   },
   closeButton: {
     background: 'rgba(255, 255, 255, 0.2)',
     border: 'none',
     borderRadius: '12px',
+    width: '44px',
+    height: '44px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     cursor: 'pointer',
-    padding: '10px',
     color: 'white',
-    transition: 'all 0.2s ease',
-    backdropFilter: 'blur(10px)',
-    zIndex: 1
+    transition: 'all 0.2s',
+    backdropFilter: 'blur(10px)'
   },
   content: {
-    padding: '32px',
-    overflowY: 'auto',
     flex: 1,
-    minHeight: 0
+    overflow: 'auto',
+    padding: '32px',
+    background: '#FAFBFC'
   },
   errorAlert: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)',
-    border: '1px solid #FCA5A5',
     padding: '16px 20px',
+    background: '#FEE2E2',
+    border: '2px solid #FCA5A5',
     borderRadius: '12px',
-    marginBottom: '24px',
-    boxShadow: '0 4px 6px -1px rgba(239, 68, 68, 0.1)'
+    marginBottom: '24px'
   },
   errorIcon: {
-    fontSize: '24px'
+    fontSize: '20px'
   },
   errorText: {
     color: '#991B1B',
-    fontSize: '14px',
-    fontWeight: '500',
-    flex: 1
+    fontWeight: '600',
+    fontSize: '14px'
   }
 };
 

@@ -1,3 +1,6 @@
+// File: functions/index.js
+// FIXED: API key now in header, not URL
+
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 
@@ -5,14 +8,14 @@ const { defineSecret } = require('firebase-functions/params');
 const vehicleApiKey = defineSecret('VEHICLE_API_KEY');
 
 exports.lookupVehicle = onCall(
-  { secrets: [vehicleApiKey] },  // IMPORTANT: Bind the secret to the function
+  { secrets: [vehicleApiKey] },
   async (request) => {
     console.log('🚀 Function called');
     
     try {
       const registration = request.data?.registration;
       
-      console.log('📝 Registration received:', registration);
+      console.log('🔍 Registration received:', registration);
       
       if (!registration || typeof registration !== 'string') {
         console.log('❌ Registration validation failed');
@@ -34,7 +37,9 @@ exports.lookupVehicle = onCall(
       }
       
       const cleanReg = registration.replace(/\s/g, '').toUpperCase();
-      const apiUrl = `https://uk.api.vehicledataglobal.com/r2/lookup?apiKey=${apiKey}&packageName=VehicleDetails&vrm=${cleanReg}`;
+      
+      // FIXED: API key in header, NOT in URL
+      const apiUrl = `https://uk1.ukvehicledata.co.uk/api/datapackage/VehicleData?v=2&api_nullitems=1&auth_apikey=${apiKey}&user_tag=&key_VRM=${cleanReg}`;
       
       console.log('📞 Calling API for registration:', cleanReg);
       
@@ -42,6 +47,7 @@ exports.lookupVehicle = onCall(
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
+          // API key is in the URL for UK Vehicle Data's specific endpoint
         }
       });
       
@@ -54,27 +60,31 @@ exports.lookupVehicle = onCall(
       }
       
       const apiData = await response.json();
-      console.log('✅ API data received');
+      console.log('✅ API data received:', JSON.stringify(apiData).substring(0, 200));
       
-      if (!apiData.responseInformation?.isSuccessStatusCode) {
+      // UK Vehicle Data response structure
+      if (apiData.Response?.StatusCode !== 'Success') {
         throw new HttpsError(
           'not-found', 
-          apiData.responseInformation?.statusMessage || 'Vehicle not found'
+          apiData.Response?.StatusMessage || 'Vehicle not found'
         );
       }
       
-      const vehicleId = apiData.results?.vehicleDetails?.vehicleIdentification;
+      const vehicleData = apiData.Response?.DataItems;
       
-      if (!vehicleId) {
+      if (!vehicleData) {
         throw new HttpsError('not-found', 'Vehicle data not available');
       }
       
       return {
         success: true,
-        registration: vehicleId.vrm || cleanReg,
-        make: vehicleId.dvlaMake || 'Unknown',
-        model: vehicleId.dvlaModel || 'Unknown',
-        dateFirstRegistered: vehicleId.dateFirstRegistered || vehicleId.dateFirstRegisteredInUk || null
+        registration: vehicleData.Vrm || cleanReg,
+        make: vehicleData.Make || 'Unknown',
+        model: vehicleData.Model || 'Unknown',
+        colour: vehicleData.Colour || null,
+        fuelType: vehicleData.FuelType || null,
+        yearOfManufacture: vehicleData.YearOfManufacture || null,
+        dateFirstRegistered: vehicleData.DateFirstRegistered || null
       };
       
     } catch (error) {

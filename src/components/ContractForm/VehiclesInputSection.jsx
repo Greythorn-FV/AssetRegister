@@ -1,5 +1,5 @@
 // File: src/components/ContractForm/VehiclesInputSection.jsx
-// Vehicles input section with DVLA lookup
+// Vehicles input section with DVLA lookup and Net/Gross pricing
 
 import React, { useState } from 'react';
 import { Plus, X, Search } from 'lucide-react';
@@ -14,10 +14,21 @@ const VehiclesInputSection = ({
   const [lookupLoading, setLookupLoading] = useState({});
   const [lookupErrors, setLookupErrors] = useState({});
 
+  // Handle net price change and auto-calculate gross
+  const handleNetPriceChange = (index, value) => {
+    // Calculate gross price (net + 20% VAT)
+    const netAmount = parseFloat(value) || 0;
+    const grossAmount = netAmount * 1.2;
+    
+    // Update both fields at once using object syntax
+    onVehicleChange(index, {
+      netPrice: value,
+      grossPrice: grossAmount > 0 ? grossAmount.toFixed(2) : ''
+    });
+  };
+
   const handleVehicleLookup = async (index) => {
     const registration = vehicles[index]?.registration;
-    
-    console.log('Registration value:', registration); // DEBUG
     
     if (!registration || registration.trim().length < 2) {
       setLookupErrors({ ...lookupErrors, [index]: 'Enter a registration number first' });
@@ -30,42 +41,34 @@ const VehiclesInputSection = ({
     try {
       const functions = getFunctions();
       const lookupVehicle = httpsCallable(functions, 'lookupVehicle');
-      
-      console.log('Calling function with:', { registration: registration.trim() }); // DEBUG
-      
       const result = await lookupVehicle({ registration: registration.trim() });
       
       if (result.data.success) {
-        // Auto-fill the make and model
         onVehicleChange(index, 'make', result.data.make);
         onVehicleChange(index, 'model', result.data.model);
-        
-        // Optionally update registration to the cleaned format
         onVehicleChange(index, 'registration', result.data.registration);
-        
         setLookupErrors({ ...lookupErrors, [index]: null });
       }
     } catch (error) {
       console.error('Lookup error:', error);
-      
       let errorMessage = 'Failed to lookup vehicle';
-      
-      if (error.code === 'not-found') {
-        errorMessage = 'Vehicle not found in DVLA database';
-      } else if (error.code === 'invalid-argument') {
-        errorMessage = 'Invalid registration format';
-      } else if (error.code === 'permission-denied') {
-        errorMessage = 'API key invalid';
-      } else if (error.code === 'resource-exhausted') {
-        errorMessage = 'Too many requests, try again later';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
+      if (error.code === 'not-found') errorMessage = 'Vehicle not found in DVLA database';
+      else if (error.code === 'invalid-argument') errorMessage = 'Invalid registration format';
+      else if (error.code === 'permission-denied') errorMessage = 'API key invalid';
+      else if (error.code === 'resource-exhausted') errorMessage = 'Too many requests, try again later';
+      else if (error.message) errorMessage = error.message;
       setLookupErrors({ ...lookupErrors, [index]: errorMessage });
     } finally {
       setLookupLoading({ ...lookupLoading, [index]: false });
     }
+  };
+
+  // Format number with commas for display
+  const formatCurrency = (value) => {
+    if (!value) return '';
+    const num = parseFloat(value);
+    if (isNaN(num)) return '';
+    return num.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   return (
@@ -86,6 +89,7 @@ const VehiclesInputSection = ({
             )}
           </div>
 
+          {/* Row 1: Registration, Make, Model */}
           <div style={styles.vehicleGrid}>
             <div style={styles.formGroupWithButton}>
               <label style={styles.label}>Registration *</label>
@@ -134,6 +138,40 @@ const VehiclesInputSection = ({
               />
             </div>
           </div>
+
+          {/* Row 2: Net Price and Gross Price */}
+          <div style={styles.priceRow}>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Net Price (excl. VAT)</label>
+              <div style={styles.currencyInputWrapper}>
+                <span style={styles.currencySymbol}>£</span>
+                <input
+                  type="number"
+                  value={vehicle.netPrice || ''}
+                  onChange={(e) => handleNetPriceChange(index, e.target.value)}
+                  style={styles.currencyInput}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                />
+              </div>
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Gross Price (incl. 20% VAT)</label>
+              <div style={styles.currencyInputWrapper}>
+                <span style={styles.currencySymbol}>£</span>
+                <input
+                  type="text"
+                  value={formatCurrency(vehicle.grossPrice)}
+                  style={{...styles.currencyInput, ...styles.readOnlyInput}}
+                  readOnly
+                  placeholder="0.00"
+                />
+              </div>
+              <span style={styles.vatHint}>Auto-calculated</span>
+            </div>
+          </div>
         </div>
       ))}
       
@@ -177,7 +215,15 @@ const styles = {
   vehicleGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr 1fr',
-    gap: '12px'
+    gap: '12px',
+    marginBottom: '16px'
+  },
+  priceRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '12px',
+    paddingTop: '16px',
+    borderTop: '1px solid #e2e8f0'
   },
   formGroup: {
     marginBottom: '0'
@@ -201,7 +247,45 @@ const styles = {
     outline: 'none',
     transition: 'all 0.2s ease',
     fontFamily: 'inherit',
-    background: '#ffffff'
+    background: '#ffffff',
+    boxSizing: 'border-box'
+  },
+  currencyInputWrapper: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center'
+  },
+  currencySymbol: {
+    position: 'absolute',
+    left: '14px',
+    color: '#64748b',
+    fontWeight: '600',
+    fontSize: '14px',
+    zIndex: 1
+  },
+  currencyInput: {
+    width: '100%',
+    padding: '12px 14px 12px 30px',
+    border: '2px solid #e2e8f0',
+    borderRadius: '10px',
+    fontSize: '14px',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+    fontFamily: 'inherit',
+    background: '#ffffff',
+    boxSizing: 'border-box'
+  },
+  readOnlyInput: {
+    background: '#f1f5f9',
+    color: '#1e293b',
+    fontWeight: '600',
+    cursor: 'not-allowed'
+  },
+  vatHint: {
+    fontSize: '11px',
+    color: '#64748b',
+    marginTop: '4px',
+    fontStyle: 'italic'
   },
   inputButtonGroup: {
     display: 'flex',

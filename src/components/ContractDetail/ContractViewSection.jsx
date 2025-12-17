@@ -1,8 +1,8 @@
 // File: src/components/ContractDetail/ContractViewSection.jsx
-// View mode for contract details - FIXED FOR VARIABLE INTEREST
+// View mode for contract details - FIXED VERSION
 
 import React from 'react';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, FileText } from 'lucide-react';
 import { formatCurrency } from '../../utils/currencyHelpers.js';
 import { formatDate } from '../../utils/dateHelpers.js';
 import InterestRateSection from './InterestRateSection.jsx';
@@ -16,17 +16,16 @@ const ContractViewSection = ({
   onDeleteContract,
   onSettleVehicle,
   onSettleVehicleWithImpact,
-  onUpdateRate
+  onUpdateRate,
+  onViewStatement
 }) => {
   // Calculate TOTAL interest properly for variable contracts
   const getTotalInterest = () => {
     if (contract.interestType === 'variable') {
-      // For variable: interestOutstanding + interest already paid
       const monthsElapsed = metrics.monthsElapsed || 0;
       const interestPaid = (metrics.monthlyInterest || 0) * monthsElapsed;
       return interestPaid + (metrics.interestOutstanding || 0);
     }
-    // For fixed: use stored value
     return contract.totalInterest;
   };
 
@@ -44,11 +43,13 @@ const ContractViewSection = ({
         </div>
 
         <div style={styles.grid}>
+          {/* Total Capital */}
           <div style={styles.infoItem}>
             <div style={styles.infoLabel}>Total Capital</div>
             <div style={styles.infoValue}>{formatCurrency(contract.totalCapital)}</div>
           </div>
           
+          {/* Total Interest */}
           <div style={styles.infoItem}>
             <div style={styles.infoLabel}>
               Total Interest
@@ -61,41 +62,54 @@ const ContractViewSection = ({
             </div>
           </div>
           
+          {/* Monthly Capital Instalment - FIXED: Uses monthlyCapitalInstalment */}
           <div style={styles.infoItem}>
             <div style={styles.infoLabel}>Monthly Capital Instalment</div>
-            <div style={styles.infoValue}>{formatCurrency(metrics.currentMonthlyCapital)}</div>
+            <div style={styles.infoValue}>{formatCurrency(metrics.monthlyCapitalInstalment)}</div>
+            {contract.activeVehiclesCount < contract.originalVehicleCount && (
+              <div style={{fontSize: '11px', color: '#64748b', marginTop: '4px'}}>
+                Current: {formatCurrency(metrics.currentMonthlyCapital)} ({contract.activeVehiclesCount} active)
+              </div>
+            )}
           </div>
 
+          {/* Monthly Interest Payment */}
           <div style={styles.infoItem}>
             <div style={styles.infoLabel}>Monthly Interest Payment</div>
             <div style={styles.infoValue}>{formatCurrency(metrics.monthlyInterest || 0)}</div>
           </div>
           
+          {/* Capital Outstanding - FIXED: Now uses correct calculation */}
           <div style={styles.infoItem}>
             <div style={styles.infoLabel}>Capital Outstanding</div>
             <div style={styles.infoValueHighlight}>{formatCurrency(metrics.capitalOutstanding)}</div>
           </div>
 
+          {/* Interest Outstanding */}
           <div style={styles.infoItem}>
             <div style={styles.infoLabel}>Interest Outstanding</div>
             <div style={styles.infoValueHighlight}>{formatCurrency(metrics.interestOutstanding || 0)}</div>
           </div>
           
+          {/* Total Instalments */}
           <div style={styles.infoItem}>
             <div style={styles.infoLabel}>Total Instalments</div>
             <div style={styles.infoValue}>{contract.totalInstalments} months</div>
           </div>
           
+          {/* Months Remaining */}
           <div style={styles.infoItem}>
             <div style={styles.infoLabel}>Months Remaining</div>
             <div style={styles.infoValue}>{metrics.monthsRemaining} months</div>
           </div>
           
+          {/* First Instalment Date */}
           <div style={styles.infoItem}>
             <div style={styles.infoLabel}>First Instalment Date</div>
             <div style={styles.infoValue}>{formatDate(contract.firstInstalmentDate)}</div>
           </div>
           
+          {/* Progress */}
           <div style={styles.infoItem}>
             <div style={styles.infoLabel}>Progress</div>
             <div style={styles.progressBar}>
@@ -104,6 +118,17 @@ const ContractViewSection = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Statement of Account Button */}
+      <div style={styles.statementSection}>
+        <button onClick={onViewStatement} style={styles.statementButton} disabled={loading}>
+          <FileText size={20} />
+          <div style={styles.statementButtonText}>
+            <span style={styles.statementButtonTitle}>Statement of Account</span>
+            <span style={styles.statementButtonSubtitle}>View detailed transaction history</span>
+          </div>
+        </button>
       </div>
 
       {/* Interest Rate Section - Only for Variable Interest */}
@@ -224,6 +249,39 @@ const styles = {
     fontSize: '13px',
     fontWeight: '700',
     color: '#1A202C'
+  },
+  statementSection: {
+    marginBottom: '24px'
+  },
+  statementButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    width: '100%',
+    padding: '20px 24px',
+    background: 'linear-gradient(135deg, #4B6D8B 0%, #6B8CAE 100%)',
+    border: 'none',
+    borderRadius: '14px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    boxShadow: '0 4px 12px rgba(75, 109, 139, 0.3)',
+    color: 'white'
+  },
+  statementButtonText: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: '4px'
+  },
+  statementButtonTitle: {
+    fontSize: '16px',
+    fontWeight: '700',
+    letterSpacing: '-0.01em'
+  },
+  statementButtonSubtitle: {
+    fontSize: '13px',
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.85)'
   },
   footer: {
     display: 'flex',

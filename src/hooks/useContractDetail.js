@@ -1,5 +1,5 @@
 // File: src/hooks/useContractDetail.js
-// Custom hook for Contract Detail Modal business logic
+// Custom hook for Contract Detail Modal business logic - WITH STATEMENT MODAL
 
 import { useState } from 'react';
 import { settleVehicle, updateContract, deleteContract } from '../services/firestoreService.js';
@@ -13,6 +13,7 @@ export const useContractDetail = (contract, onUpdate, onClose) => {
   const [isRateChangeModalOpen, setIsRateChangeModalOpen] = useState(false);
   const [isSettlementImpactOpen, setIsSettlementImpactOpen] = useState(false);
   const [selectedVehicleForSettlement, setSelectedVehicleForSettlement] = useState(null);
+  const [isStatementModalOpen, setIsStatementModalOpen] = useState(false); // NEW
 
   const metrics = contract ? calculateContractMetrics(contract) : null;
 
@@ -194,6 +195,15 @@ export const useContractDetail = (contract, onUpdate, onClose) => {
     setSelectedVehicleForSettlement(null);
   };
 
+  // NEW: Statement modal handlers
+  const openStatementModal = () => {
+    setIsStatementModalOpen(true);
+  };
+
+  const closeStatementModal = () => {
+    setIsStatementModalOpen(false);
+  };
+
   return {
     // State
     isEditing,
@@ -204,6 +214,7 @@ export const useContractDetail = (contract, onUpdate, onClose) => {
     isRateChangeModalOpen,
     isSettlementImpactOpen,
     selectedVehicleForSettlement,
+    isStatementModalOpen, // NEW
     
     // Actions
     handleEditClick,
@@ -218,6 +229,8 @@ export const useContractDetail = (contract, onUpdate, onClose) => {
     closeRateChangeModal,
     handleRateChangeSuccess,
     closeSettlementImpactModal,
+    openStatementModal, // NEW
+    closeStatementModal, // NEW
     setEditData
   };
 };

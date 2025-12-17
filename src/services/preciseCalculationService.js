@@ -1,88 +1,11 @@
 // File: src/services/preciseCalculationService.js
-// Day-Precise Interest Calculations for Variable Interest Contracts
+// Day-Precise Interest Calculations - FIXED CAPITAL PAYMENT BUG
 
 import { parseISO, differenceInDays, addMonths, getDaysInMonth, startOfMonth, endOfMonth } from 'date-fns';
 
 /**
- * Calculate exact interest for a specific calendar month with settlements
- * Uses ACTUAL days in month, not 30-day approximation
- */
-export const calculatePreciseMonthInterest = (contract, monthDate, monthNumber = null) => {
-  if (contract.interestType !== 'variable') {
-    // Fixed interest - simple division
-    return contract.totalInterest / contract.totalInstalments;
-  }
-
-  const annualRate = contract.interestRateAnnual || (contract.baseRate + contract.margin);
-  const dailyRate = (annualRate / 100) / 365;
-  
-  // Get actual days in this specific month
-  const year = monthDate.getFullYear();
-  const month = monthDate.getMonth();
-  const daysInThisMonth = getDaysInMonth(monthDate);
-  
-  // Calculate starting balance for this month
-  const monthsSinceStart = monthNumber !== null 
-    ? monthNumber - 1 
-    : Math.floor((monthDate - parseISO(contract.firstInstalmentDate)) / (30.44 * 24 * 60 * 60 * 1000));
-  
-  const monthlyCapitalTotal = contract.totalCapital / contract.totalInstalments;
-  const capitalPaidBefore = monthlyCapitalTotal * monthsSinceStart;
-  let currentBalance = contract.totalCapital - capitalPaidBefore;
-  
-  // Find any settlements that happened THIS month
-  const settlementsThisMonth = (contract.vehicles || []).filter(v => {
-    if (v.status !== 'settled' || !v.settledDate) return false;
-    const settledDate = new Date(v.settledDate);
-    return settledDate.getMonth() === month && 
-           settledDate.getFullYear() === year;
-  });
-  
-  // NO SETTLEMENTS THIS MONTH - Simple calculation
-  if (settlementsThisMonth.length === 0) {
-    return currentBalance * dailyRate * daysInThisMonth;
-  }
-  
-  // HAS SETTLEMENTS - Day-by-day calculation
-  let totalInterest = 0;
-  let currentDay = 1;
-  
-  // Sort settlements by date
-  settlementsThisMonth.sort((a, b) => 
-    new Date(a.settledDate) - new Date(b.settledDate)
-  );
-  
-  for (const settlement of settlementsThisMonth) {
-    const settlementDay = new Date(settlement.settledDate).getDate();
-    
-    // Calculate interest from currentDay up to (but not including) settlement day
-    const daysBefore = settlementDay - currentDay;
-    if (daysBefore > 0) {
-      const interestBefore = currentBalance * dailyRate * daysBefore;
-      totalInterest += interestBefore;
-    }
-    
-    // Reduce balance by this vehicle's remaining capital
-    const monthsRemainingAtSettlement = contract.totalInstalments - monthsSinceStart;
-    const vehicleCapitalRemaining = contract.perVehicleCapitalRate * monthsRemainingAtSettlement;
-    currentBalance -= vehicleCapitalRemaining;
-    
-    currentDay = settlementDay;
-  }
-  
-  // Calculate interest for remaining days after last settlement
-  const daysAfter = daysInThisMonth - currentDay + 1;
-  if (daysAfter > 0) {
-    const interestAfter = currentBalance * dailyRate * daysAfter;
-    totalInterest += interestAfter;
-  }
-  
-  return totalInterest;
-};
-
-/**
  * Generate complete payment schedule with EXACT calendar days
- * Returns month-by-month breakdown with actual interest
+ * FIXED TO MATCH HSBC: Uses actual days between payments, not calendar month days
  */
 export const generatePrecisePaymentSchedule = (contract) => {
   if (!contract || !contract.totalInstalments) return [];
@@ -97,19 +20,35 @@ export const generatePrecisePaymentSchedule = (contract) => {
   
   for (let month = 1; month <= contract.totalInstalments; month++) {
     const monthDate = addMonths(startDate, month - 1);
-    const daysInMonth = getDaysInMonth(monthDate);
     
-    // Calculate interest for THIS specific month with actual days
+    // FIXED: Calculate actual days between THIS payment and LAST payment (HSBC method)
+    const lastPaymentDate = month === 1 ? startDate : addMonths(startDate, month - 2);
+    const currentPaymentDate = monthDate;
+    
+    // Interest period ends day BEFORE payment date
+    const interestPeriodEnd = new Date(currentPaymentDate);
+    interestPeriodEnd.setDate(interestPeriodEnd.getDate() - 1);
+    
+    // Actual days in interest period (not calendar month days)
+    const actualDaysInPeriod = differenceInDays(interestPeriodEnd, lastPaymentDate) + 1;
+    
+    // Calculate interest using the HSBC method (period-based, not calendar month)
     const monthlyInterest = contract.interestType === 'variable'
-      ? outstandingBalance * dailyRate * daysInMonth
+      ? calculatePreciseMonthInterest(contract, monthDate, month)
       : contract.totalInterest / contract.totalInstalments;
     
-    // Check how many vehicles are active this month
+    // Check how many vehicles are active AT THE START of this payment month
     let activeVehicles = contract.originalVehicleCount;
     if (contract.vehicles) {
       contract.vehicles.forEach(v => {
-        if (v.status === 'settled' && v.settledAtMonth < month) {
-          activeVehicles--;
+        if (v.status === 'settled' && v.settledDate) {
+          const settlementDate = parseISO(v.settledDate);
+          const paymentDate = monthDate;
+          
+          // Only reduce count if vehicle was settled BEFORE this payment date
+          if (settlementDate < paymentDate) {
+            activeVehicles--;
+          }
         }
       });
     }
@@ -120,104 +59,22 @@ export const generatePrecisePaymentSchedule = (contract) => {
       month,
       monthDate: monthDate.toISOString(),
       monthName: monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
-      daysInMonth,
+      daysInMonth: actualDaysInPeriod, // CHANGED: Now shows actual days in interest period
       outstandingBalanceStart: outstandingBalance,
       capitalPayment: actualMonthlyCapital,
       interestPayment: monthlyInterest,
       totalPayment: actualMonthlyCapital + monthlyInterest,
       outstandingBalanceEnd: Math.max(0, outstandingBalance - actualMonthlyCapital),
       activeVehicles,
-      interestRate: contract.interestType === 'variable' ? annualRate : null
+      interestRate: contract.interestType === 'variable' ? annualRate : null,
+      interestPeriodStart: lastPaymentDate.toISOString(), // NEW: Show interest period
+      interestPeriodEnd: interestPeriodEnd.toISOString()   // NEW: Show interest period
     });
     
     outstandingBalance = Math.max(0, outstandingBalance - actualMonthlyCapital);
   }
   
   return schedule;
-};
-
-/**
- * Calculate EXACT total interest for entire contract
- * Uses actual calendar days for each month
- */
-export const calculateExactTotalInterest = (
-  totalCapital,
-  totalInstalments,
-  baseRate,
-  margin,
-  firstInstalmentDate,
-  originalVehicleCount = 1
-) => {
-  const annualRate = baseRate + margin;
-  const dailyRate = (annualRate / 100) / 365;
-  const monthlyCapital = totalCapital / totalInstalments / originalVehicleCount;
-  const startDate = typeof firstInstalmentDate === 'string' 
-    ? parseISO(firstInstalmentDate) 
-    : firstInstalmentDate;
-  
-  let totalInterest = 0;
-  let outstandingBalance = totalCapital;
-  
-  for (let month = 0; month < totalInstalments; month++) {
-    const monthDate = addMonths(startDate, month);
-    const daysInThisMonth = getDaysInMonth(monthDate);
-    
-    // Interest for this specific month with ACTUAL days
-    const monthInterest = outstandingBalance * dailyRate * daysInThisMonth;
-    totalInterest += monthInterest;
-    
-    // Reduce balance
-    const monthlyCapitalTotal = monthlyCapital * originalVehicleCount;
-    outstandingBalance -= monthlyCapitalTotal;
-    if (outstandingBalance < 0) outstandingBalance = 0;
-  }
-  
-  return totalInterest;
-};
-
-/**
- * Get breakdown by month for preview display
- */
-export const getMonthlyInterestBreakdown = (
-  totalCapital,
-  totalInstalments,
-  baseRate,
-  margin,
-  firstInstalmentDate
-) => {
-  const annualRate = baseRate + margin;
-  const dailyRate = (annualRate / 100) / 365;
-  const monthlyCapital = totalCapital / totalInstalments;
-  const startDate = typeof firstInstalmentDate === 'string' 
-    ? parseISO(firstInstalmentDate) 
-    : firstInstalmentDate;
-  
-  const breakdown = [];
-  let outstandingBalance = totalCapital;
-  
-  // Show first month, middle month, and last month
-  const monthsToShow = [0, Math.floor(totalInstalments / 2), totalInstalments - 1];
-  
-  for (let month = 0; month < totalInstalments; month++) {
-    const monthDate = addMonths(startDate, month);
-    const daysInMonth = getDaysInMonth(monthDate);
-    const monthInterest = outstandingBalance * dailyRate * daysInMonth;
-    
-    if (monthsToShow.includes(month)) {
-      breakdown.push({
-        monthNumber: month + 1,
-        monthName: monthDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
-        daysInMonth,
-        balance: outstandingBalance,
-        interest: monthInterest
-      });
-    }
-    
-    outstandingBalance -= monthlyCapital;
-    if (outstandingBalance < 0) outstandingBalance = 0;
-  }
-  
-  return breakdown;
 };
 
 /**
@@ -311,4 +168,175 @@ export const analyzeContractDates = (firstInstalmentDate, totalInstalments) => {
       getDaysInMonth(addMonths(startDate, i))
     ).reduce((sum, days) => sum + days, 0)
   };
+};
+
+/**
+ * Calculate exact interest for a specific calendar month with settlements
+ * FIXED TO MATCH HSBC: Interest calculated from LAST payment date to CURRENT payment date
+ */
+export const calculatePreciseMonthInterest = (contract, monthDate, monthNumber = null) => {
+  if (contract.interestType !== 'variable') {
+    // Fixed interest - simple division
+    return contract.totalInterest / contract.totalInstalments;
+  }
+
+  const annualRate = contract.interestRateAnnual || (contract.baseRate + contract.margin);
+  const dailyRate = (annualRate / 100) / 365;
+  
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  
+  // FIXED: Calculate actual days between payment dates (HSBC method)
+  const startDate = parseISO(contract.firstInstalmentDate);
+  const monthsSinceStart = monthNumber !== null 
+    ? monthNumber - 1 
+    : Math.floor((monthDate - startDate) / (30.44 * 24 * 60 * 60 * 1000));
+  
+  // Last payment date (or contract start for first month)
+  const lastPaymentDate = monthsSinceStart === 0 
+    ? startDate 
+    : addMonths(startDate, monthsSinceStart - 1);
+  
+  // Current payment date
+  const currentPaymentDate = addMonths(startDate, monthsSinceStart);
+  
+  // HSBC METHOD: Interest period is from last payment to day BEFORE current payment
+  const interestPeriodEnd = addMonths(startDate, monthsSinceStart);
+  interestPeriodEnd.setDate(interestPeriodEnd.getDate() - 1); // Day before payment
+  
+  // Actual days in THIS interest period (not calendar month days)
+  const actualDaysInPeriod = differenceInDays(interestPeriodEnd, lastPaymentDate) + 1;
+  
+  // Calculate starting balance for this period
+  const monthlyCapitalTotal = contract.totalCapital / contract.totalInstalments;
+  const capitalPaidBefore = monthlyCapitalTotal * monthsSinceStart;
+  let currentBalance = contract.totalCapital - capitalPaidBefore;
+  
+  // Find any settlements that happened DURING THIS INTEREST PERIOD
+  const settlementsThisPeriod = (contract.vehicles || []).filter(v => {
+    if (v.status !== 'settled' || !v.settledDate) return false;
+    const settledDate = parseISO(v.settledDate);
+    // Settlement must be within the interest period (lastPayment to currentPayment-1)
+    return settledDate >= lastPaymentDate && settledDate <= interestPeriodEnd;
+  });
+  
+  // NO SETTLEMENTS IN THIS PERIOD - Simple calculation
+  if (settlementsThisPeriod.length === 0) {
+    return currentBalance * dailyRate * actualDaysInPeriod;
+  }
+  
+  // HAS SETTLEMENTS - Day-by-day calculation within the interest period
+  let totalInterest = 0;
+  let periodStartDay = lastPaymentDate;
+  
+  // Sort settlements by date
+  settlementsThisPeriod.sort((a, b) => 
+    parseISO(a.settledDate) - parseISO(b.settledDate)
+  );
+  
+  for (const settlement of settlementsThisPeriod) {
+    const settlementDate = parseISO(settlement.settledDate);
+    
+    // Calculate interest from period start to settlement date
+    const daysBeforeSettlement = differenceInDays(settlementDate, periodStartDay);
+    if (daysBeforeSettlement > 0) {
+      const interestBefore = currentBalance * dailyRate * daysBeforeSettlement;
+      totalInterest += interestBefore;
+    }
+    
+    // Reduce balance by this vehicle's remaining capital
+    const monthsRemainingAtSettlement = contract.totalInstalments - monthsSinceStart;
+    const vehicleCapitalRemaining = contract.perVehicleCapitalRate * monthsRemainingAtSettlement;
+    currentBalance -= vehicleCapitalRemaining;
+    
+    periodStartDay = settlementDate;
+  }
+  
+  // Calculate interest for remaining days after last settlement until period end
+  const daysAfterLastSettlement = differenceInDays(interestPeriodEnd, periodStartDay) + 1;
+  if (daysAfterLastSettlement > 0) {
+    const interestAfter = currentBalance * dailyRate * daysAfterLastSettlement;
+    totalInterest += interestAfter;
+  }
+  
+  return totalInterest;
+};
+
+/**
+ * Calculate EXACT total interest for entire contract
+ * Uses actual calendar days for each month
+ */
+export const calculateExactTotalInterest = (
+  totalCapital,
+  totalInstalments,
+  baseRate,
+  margin,
+  firstInstalmentDate,
+  originalVehicleCount = 1
+) => {
+  const annualRate = baseRate + margin;
+  const dailyRate = (annualRate / 100) / 365;
+  const monthlyCapital = totalCapital / totalInstalments / originalVehicleCount;
+  const startDate = typeof firstInstalmentDate === 'string' 
+    ? parseISO(firstInstalmentDate) 
+    : firstInstalmentDate;
+  
+  let totalInterest = 0;
+  let outstandingBalance = totalCapital;
+  
+  for (let month = 0; month < totalInstalments; month++) {
+    const monthDate = addMonths(startDate, month);
+    const daysInThisMonth = getDaysInMonth(monthDate);
+    
+    // Interest for this specific month with ACTUAL days
+    const monthInterest = outstandingBalance * dailyRate * daysInThisMonth;
+    totalInterest += monthInterest;
+    
+    // Reduce balance
+    const monthlyCapitalTotal = monthlyCapital * originalVehicleCount;
+    outstandingBalance -= monthlyCapitalTotal;
+    if (outstandingBalance < 0) outstandingBalance = 0;
+  }
+  
+  return totalInterest;
+};
+
+/**
+ * Get breakdown by month for preview display
+ */
+export const getMonthlyInterestBreakdown = (
+  totalCapital,
+  totalInstalments,
+  baseRate,
+  margin,
+  firstInstalmentDate
+) => {
+  const annualRate = baseRate + margin;
+  const dailyRate = (annualRate / 100) / 365;
+  const monthlyCapital = totalCapital / totalInstalments;
+  const startDate = typeof firstInstalmentDate === 'string' 
+    ? parseISO(firstInstalmentDate) 
+    : firstInstalmentDate;
+  
+  const breakdown = [];
+  let balance = totalCapital;
+  
+  for (let i = 0; i < totalInstalments; i++) {
+    const monthDate = addMonths(startDate, i);
+    const days = getDaysInMonth(monthDate);
+    const interest = balance * dailyRate * days;
+    
+    breakdown.push({
+      month: i + 1,
+      monthName: monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
+      days,
+      interest,
+      balance
+    });
+    
+    balance -= monthlyCapital;
+    if (balance < 0) balance = 0;
+  }
+  
+  return breakdown;
 };

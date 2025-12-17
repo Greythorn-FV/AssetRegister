@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, FileText, Calendar, Users, Search, Plus, Zap, Upload, BarChart3 } from 'lucide-react';
-import { getAllContracts, searchByRegistration, searchByContractNumber } from '../services/firestoreService.js';
+import { TrendingUp, FileText, Calendar, Users, Search, Plus, Zap, Upload, BarChart3, Trash2 } from 'lucide-react';
+import { getAllContracts, searchByRegistration, searchByContractNumber, deleteAllContracts } from '../services/firestoreService.js';
 import { calculateContractMetrics } from '../services/calculationService.js';
 import ContractModal from './ContractModal.jsx';
 import ContractDetailModal from './ContractDetailModal.jsx';
@@ -18,6 +18,44 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
   const [selectedContract, setSelectedContract] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Handle delete all contracts
+  const handleDeleteAllContracts = async () => {
+    if (contracts.length === 0) {
+      alert('No contracts to delete.');
+      return;
+    }
+
+    // First confirmation
+    const firstConfirm = window.confirm(
+      `⚠️ WARNING: You are about to delete ALL ${contracts.length} contracts!\n\nThis action cannot be undone.\n\nAre you sure you want to continue?`
+    );
+
+    if (!firstConfirm) return;
+
+    // Second confirmation - type to confirm
+    const typeConfirm = window.prompt(
+      `To confirm deletion of all ${contracts.length} contracts, type "DELETE ALL" below:`
+    );
+
+    if (typeConfirm !== 'DELETE ALL') {
+      alert('Deletion cancelled. You must type "DELETE ALL" exactly to confirm.');
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const deletedCount = await deleteAllContracts();
+      alert(`✅ Successfully deleted ${deletedCount} contracts.`);
+      loadContracts(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting contracts:', error);
+      alert('❌ Failed to delete contracts: ' + error.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   useEffect(() => {
     loadContracts();
@@ -154,6 +192,12 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
     return 'Fixed';
   };
 
+  // Helper function to format currency
+  const formatCurrency = (value) => {
+    if (!value || value === 0) return '—';
+    return `£${value.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   if (loading) {
     return (
       <div style={styles.loading}>
@@ -184,6 +228,18 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
   >
     <Upload size={20} />
     Import Contracts
+  </button>
+  <button 
+    onClick={handleDeleteAllContracts} 
+    disabled={isDeleting || contracts.length === 0}
+    style={{
+      ...styles.deleteAllButton,
+      opacity: (isDeleting || contracts.length === 0) ? 0.5 : 1,
+      cursor: (isDeleting || contracts.length === 0) ? 'not-allowed' : 'pointer'
+    }}
+  >
+    <Trash2 size={18} />
+    {isDeleting ? 'Deleting...' : 'Delete All'}
   </button>
 </Header>
 
@@ -293,7 +349,9 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
               </div>
               <div style={styles.resultItem}>
                 <div style={styles.resultKey}>Make/Model</div>
-                <div style={styles.resultValue}>{searchResults.data.vehicle.make}</div>
+                <div style={styles.resultValue}>
+                  {searchResults.data.vehicle.make} {searchResults.data.vehicle.model}
+                </div>
               </div>
               <div style={styles.resultItem}>
                 <div style={styles.resultKey}>Contract</div>
@@ -302,7 +360,19 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
               <div style={styles.resultItem}>
                 <div style={styles.resultKey}>Status</div>
                 <div style={styles.resultValue}>
-                  {searchResults.data.vehicle.settled ? 'Settled' : 'Active'}
+                  {searchResults.data.vehicle.status === 'settled' ? 'Settled' : 'Active'}
+                </div>
+              </div>
+              <div style={styles.resultItem}>
+                <div style={styles.resultKey}>Net Price</div>
+                <div style={styles.resultValue}>
+                  {formatCurrency(searchResults.data.vehicle.netPrice)}
+                </div>
+              </div>
+              <div style={styles.resultItem}>
+                <div style={styles.resultKey}>Gross Price</div>
+                <div style={styles.resultValue}>
+                  {formatCurrency(searchResults.data.vehicle.grossPrice)}
                 </div>
               </div>
             </div>
@@ -541,6 +611,21 @@ const styles = {
     cursor: 'pointer',
     transition: 'all 0.2s',
     boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)'
+  },
+  deleteAllButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '16px 28px',
+    background: 'linear-gradient(135deg, #DC2626, #B91C1C)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '14px',
+    fontSize: '15px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
   },
   addButton: {
     display: 'flex',

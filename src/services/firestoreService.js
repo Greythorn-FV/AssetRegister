@@ -115,18 +115,23 @@ export const searchByRegistration = async (registration) => {
 
 export const addContract = async (contractData) => {
   try {
-    const perVehicleRate = contractData.totalCapital / contractData.totalInstalments / contractData.originalVehicleCount;
+    // Use the vehicle count from the actual vehicles array
+    const vehicleCount = contractData.vehicles?.length || contractData.originalVehicleCount || 1;
+    
+    // Calculate per-vehicle rate using actual vehicle count
+    const perVehicleRate = contractData.totalCapital / contractData.totalInstalments / vehicleCount;
+    
+    // Calculate monthly capital instalment (TOTAL for contract)
+    const monthlyCapitalInstalment = contractData.totalCapital / contractData.totalInstalments;
     
     // Handle interest based on type
     let monthlyInterest;
     if (contractData.interestType === 'variable') {
-      // For variable interest, calculate based on first month (will vary each month)
       const annualRate = contractData.interestRateAnnual || (contractData.baseRate + contractData.margin);
       const dailyRate = annualRate / 100 / 365;
-      monthlyInterest = contractData.totalCapital * dailyRate * 30; // Approximate first month
-      contractData.totalInterest = 0; // Will be calculated dynamically
+      monthlyInterest = contractData.totalCapital * dailyRate * 30;
+      contractData.totalInterest = 0;
     } else {
-      // Fixed interest
       monthlyInterest = contractData.totalInterest / contractData.totalInstalments;
     }
     
@@ -135,26 +140,37 @@ export const addContract = async (contractData) => {
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + contractData.totalInstalments);
     const today = new Date();
-    
     const contractHasEnded = endDate < today;
     
-    // If contract ended, mark all vehicles as settled
+    // Process vehicles - preserve status from import OR set based on contract end
     const vehiclesWithStatus = contractData.vehicles.map(v => ({
       registration: v.registration.toUpperCase(),
       make: v.make,
       model: v.model,
-      status: contractHasEnded ? 'settled' : 'active',
-      settledDate: contractHasEnded ? endDate.toISOString() : null,
-      settledAtMonth: contractHasEnded ? contractData.totalInstalments : null
+      netPrice: v.netPrice || 0,
+      grossPrice: v.grossPrice || 0,
+      // FIXED: Preserve imported status, only override if contract has ended
+      status: contractHasEnded ? 'settled' : (v.status || 'active'),
+      settledDate: contractHasEnded ? endDate.toISOString() : (v.settledDate || null),
+      settledAtMonth: contractHasEnded ? contractData.totalInstalments : (v.settledAtMonth || null)
     }));
+    
+    // FIXED: Calculate active count from ACTUAL vehicle statuses
+    const activeCount = vehiclesWithStatus.filter(v => v.status === 'active').length;
+    
+    // Current monthly capital based on active vehicles
+    const currentMonthlyCapital = perVehicleRate * activeCount;
     
     const newContract = {
       ...contractData,
       contractNumber: contractData.contractNumber.toUpperCase(),
-      status: contractHasEnded ? 'settled' : 'active',
-      activeVehiclesCount: contractHasEnded ? 0 : contractData.originalVehicleCount,
-      monthlyCapitalInstalment: contractData.totalCapital / contractData.totalInstalments,
-      currentMonthlyCapital: contractHasEnded ? 0 : perVehicleRate * contractData.originalVehicleCount,
+      // FIXED: Use calculated active count, not originalVehicleCount
+      status: activeCount === 0 ? 'settled' : 'active',
+      originalVehicleCount: vehicleCount,
+      activeVehiclesCount: activeCount,
+      // Key calculations
+      monthlyCapitalInstalment: monthlyCapitalInstalment,
+      currentMonthlyCapital: currentMonthlyCapital,
       perVehicleCapitalRate: perVehicleRate,
       monthlyInterest,
       createdAt: Timestamp.now(),
@@ -220,6 +236,23 @@ export const deleteContract = async (contractId) => {
   } catch (error) {
     console.error('Error deleting contract:', error);
     throw new Error('Failed to delete contract');
+  }
+};
+
+export const deleteAllContracts = async () => {
+  try {
+    const contractsRef = collection(db, CONTRACTS_COLLECTION);
+    const snapshot = await getDocs(contractsRef);
+    
+    const deletePromises = snapshot.docs.map(docSnapshot => 
+      deleteDoc(doc(db, CONTRACTS_COLLECTION, docSnapshot.id))
+    );
+    await Promise.all(deletePromises);
+    
+    return snapshot.size;
+  } catch (error) {
+    console.error('Error deleting all contracts:', error);
+    throw new Error('Failed to delete all contracts: ' + error.message);
   }
 };
 
