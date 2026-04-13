@@ -1,7 +1,7 @@
 // File: src/hooks/useContractForm.js
 // Custom hook for Contract Modal business logic
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { addContract } from '../services/firestoreService.js';
 
 const INITIAL_FORM_STATE = {
@@ -20,6 +20,12 @@ export const useContractForm = (onSuccess, onClose) => {
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Keep fresh references to callbacks to avoid stale closures
+  const onSuccessRef = useRef(onSuccess);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onSuccessRef.current = onSuccess; }, [onSuccess]);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   // Handle input changes
   const handleInputChange = (field, value) => {
@@ -170,8 +176,8 @@ export const useContractForm = (onSuccess, onClose) => {
 
       // Reset form
       setFormData(INITIAL_FORM_STATE);
-      onSuccess();
-      onClose();
+      if (typeof onSuccessRef.current === 'function') onSuccessRef.current();
+      if (typeof onCloseRef.current === 'function') onCloseRef.current();
     } catch (err) {
       setError(err.message || 'Failed to add contract');
     } finally {
