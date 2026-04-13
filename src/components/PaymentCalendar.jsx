@@ -6,9 +6,312 @@ import { ChevronLeft, ChevronRight, Calendar, TrendingUp, DollarSign } from 'luc
 import { format, startOfMonth, addMonths, subMonths } from 'date-fns';
 import { usePaymentCalendar } from '../hooks/usePaymentCalendar.js';
 import { formatCurrency } from '../utils/currencyHelpers.js';
+import { colors, gradients, fonts, shadows, radius } from '../styles/theme.js';
+import { useIsMobile } from '../hooks/useIsMobile.js';
+
+const getStyles = (m) => ({
+  container: {
+    background: colors.surface,
+    borderRadius: radius.lg,
+    padding: m ? '12px' : '24px',
+    boxShadow: shadows.sm,
+    border: `1px solid ${colors.border}`,
+    marginTop: m ? '16px' : '32px',
+    maxWidth: '100vw',
+    overflowX: 'hidden',
+    boxSizing: 'border-box'
+  },
+  header: {
+    display: 'flex',
+    flexDirection: m ? 'column' : 'row',
+    justifyContent: 'space-between',
+    alignItems: m ? 'flex-start' : 'center',
+    gap: m ? '12px' : '0',
+    marginBottom: m ? '12px' : '20px',
+    paddingBottom: m ? '12px' : '16px',
+    borderBottom: `2px solid ${colors.border}`
+  },
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: m ? '8px' : '12px'
+  },
+  iconWrapper: {
+    width: m ? '32px' : '40px',
+    height: m ? '32px' : '40px',
+    background: gradients.primary,
+    borderRadius: radius.md,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0
+  },
+  title: {
+    margin: '0 0 2px 0',
+    fontSize: m ? '16px' : '20px',
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary
+  },
+  subtitle: {
+    margin: 0,
+    fontSize: m ? '11px' : fonts.size.sm,
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.medium
+  },
+  monthNavigation: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: m ? '6px' : '10px'
+  },
+  navButton: {
+    padding: m ? '6px' : '8px',
+    background: colors.background,
+    border: 'none',
+    borderRadius: radius.md,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s',
+    color: colors.primary
+  },
+  currentMonth: {
+    fontSize: m ? fonts.size.sm : fonts.size.md,
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary,
+    minWidth: m ? '110px' : '150px',
+    textAlign: 'center'
+  },
+  todayButton: {
+    padding: m ? '6px 10px' : '8px 16px',
+    background: gradients.primary,
+    color: colors.textOnDark,
+    border: 'none',
+    borderRadius: radius.md,
+    fontSize: m ? '11px' : '13px',
+    fontWeight: fonts.weight.bold,
+    cursor: 'pointer',
+    transition: 'all 0.2s'
+  },
+  summaryGrid: {
+    display: 'grid',
+    gridTemplateColumns: m ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: m ? '8px' : '12px',
+    marginBottom: m ? '12px' : '20px'
+  },
+  summaryCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: m ? '6px' : '10px',
+    padding: m ? '8px 10px' : '12px 14px',
+    background: gradients.surface,
+    borderRadius: radius.md,
+    border: `1px solid ${colors.border}`
+  },
+  summaryIcon: {
+    width: m ? '26px' : '32px',
+    height: m ? '26px' : '32px',
+    background: gradients.primary,
+    borderRadius: radius.md,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: colors.textOnDark,
+    flexShrink: 0
+  },
+  summaryContent: {
+    flex: 1,
+    minWidth: 0
+  },
+  summaryLabel: {
+    fontSize: m ? '8px' : '10px',
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.bold,
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    marginBottom: '2px'
+  },
+  summaryValue: {
+    fontSize: m ? fonts.size.base : fonts.size.xl,
+    fontWeight: fonts.weight.extrabold,
+    color: colors.primary,
+    lineHeight: '1.2'
+  },
+  summaryValueSmall: {
+    fontSize: m ? fonts.size.sm : fonts.size.base,
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary,
+    lineHeight: '1.2'
+  },
+  calendarWrapper: {
+    marginBottom: m ? '12px' : '16px',
+    overflowX: m ? 'auto' : 'visible',
+    WebkitOverflowScrolling: 'touch'
+  },
+  calendarInner: {
+    minWidth: m ? '320px' : 'auto'
+  },
+  weekdayHeader: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(7, 1fr)',
+    gap: m ? '3px' : '6px',
+    marginBottom: m ? '3px' : '6px'
+  },
+  weekday: {
+    textAlign: 'center',
+    fontSize: m ? '9px' : fonts.size.xs,
+    fontWeight: fonts.weight.bold,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    padding: m ? '4px 2px' : '6px'
+  },
+  calendarGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(7, 1fr)',
+    gap: m ? '3px' : '6px'
+  },
+  emptyCell: {
+    aspectRatio: '1',
+    background: 'transparent'
+  },
+  dayCell: {
+    aspectRatio: '1',
+    padding: m ? '3px' : '6px',
+    borderRadius: radius.md,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    transition: 'all 0.2s',
+    cursor: 'pointer',
+    minHeight: m ? '48px' : '80px',
+    position: 'relative'
+  },
+  dayNumber: {
+    fontSize: m ? '10px' : '13px',
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary,
+    marginBottom: m ? '1px' : '2px',
+    width: '100%',
+    textAlign: 'center'
+  },
+  paymentInfo: {
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: m ? '1px' : '3px'
+  },
+  paymentCount: {
+    fontSize: m ? '7px' : '9px',
+    color: colors.textOnDark,
+    fontWeight: fonts.weight.bold,
+    background: colors.primary,
+    padding: m ? '1px 3px' : '2px 6px',
+    borderRadius: radius.sm,
+    lineHeight: '1'
+  },
+  paymentAmount: {
+    fontSize: m ? '9px' : fonts.size.sm,
+    fontWeight: fonts.weight.extrabold,
+    color: colors.info,
+    textAlign: 'center',
+    lineHeight: '1.1',
+    marginTop: m ? '1px' : '2px'
+  },
+  paymentBreakdown: {
+    display: m ? 'none' : 'flex',
+    flexDirection: 'column',
+    gap: '1px',
+    fontSize: '9px',
+    width: '100%',
+    marginTop: '3px'
+  },
+  breakdownRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '1px 4px'
+  },
+  breakdownLabel: {
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.bold
+  },
+  breakdownValue: {
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.semibold
+  },
+  legend: {
+    display: 'flex',
+    alignItems: m ? 'flex-start' : 'center',
+    flexDirection: m ? 'column' : 'row',
+    gap: m ? '8px' : '16px',
+    paddingTop: m ? '12px' : '16px',
+    borderTop: `1px solid ${colors.border}`,
+    flexWrap: 'wrap'
+  },
+  legendSection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: m ? '8px' : '12px',
+    flexWrap: 'wrap'
+  },
+  legendTitle: {
+    fontSize: fonts.size.xs,
+    fontWeight: fonts.weight.bold,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  legendColors: {
+    display: 'flex',
+    gap: m ? '6px' : '10px'
+  },
+  legendItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: m ? '10px' : fonts.size.xs,
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.semibold
+  },
+  legendBox: {
+    width: m ? '14px' : '18px',
+    height: m ? '14px' : '18px',
+    borderRadius: radius.sm,
+    border: `1px solid ${colors.border}`
+  },
+  legendDivider: {
+    width: m ? '0' : '1px',
+    height: m ? '0' : '20px',
+    display: m ? 'none' : 'block',
+    background: colors.border
+  },
+  legendNote: {
+    fontSize: '10px',
+    color: colors.textMuted,
+    fontWeight: fonts.weight.semibold
+  },
+  loading: {
+    padding: m ? '24px' : '40px',
+    textAlign: 'center',
+    background: colors.surface,
+    borderRadius: radius.lg,
+    marginTop: m ? '16px' : '32px'
+  },
+  loadingText: {
+    fontSize: fonts.size.base,
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.semibold
+  }
+});
 
 const PaymentCalendar = ({ contracts }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(null);
+  const isMobile = useIsMobile();
+  const styles = getStyles(isMobile);
 
   const {
     calendarDays,
@@ -76,7 +379,7 @@ const PaymentCalendar = ({ contracts }) => {
       <div style={styles.header}>
         <div style={styles.headerLeft}>
           <div style={styles.iconWrapper}>
-            <Calendar size={20} color="#FFFFFF" />
+            <Calendar size={isMobile ? 16 : 20} color="#FFFFFF" />
           </div>
           <div>
             <h2 style={styles.title}>Payment Calendar</h2>
@@ -85,13 +388,13 @@ const PaymentCalendar = ({ contracts }) => {
         </div>
         <div style={styles.monthNavigation}>
           <button onClick={handlePreviousMonth} style={styles.navButton}>
-            <ChevronLeft size={18} />
+            <ChevronLeft size={isMobile ? 16 : 18} />
           </button>
           <div style={styles.currentMonth}>
             {format(currentMonth, 'MMMM yyyy')}
           </div>
           <button onClick={handleNextMonth} style={styles.navButton}>
-            <ChevronRight size={18} />
+            <ChevronRight size={isMobile ? 16 : 18} />
           </button>
           <button onClick={handleToday} style={styles.todayButton}>
             Today
@@ -103,7 +406,7 @@ const PaymentCalendar = ({ contracts }) => {
       <div style={styles.summaryGrid}>
         <div style={styles.summaryCard}>
           <div style={styles.summaryIcon}>
-            <DollarSign size={16} />
+            <DollarSign size={isMobile ? 12 : 16} />
           </div>
           <div style={styles.summaryContent}>
             <div style={styles.summaryLabel}>Month Total</div>
@@ -150,60 +453,101 @@ const PaymentCalendar = ({ contracts }) => {
 
       {/* Calendar Grid */}
       <div style={styles.calendarWrapper}>
-        {/* Weekday Headers */}
-        <div style={styles.weekdayHeader}>
-          {weekdays.map(day => (
-            <div key={day} style={styles.weekday}>{day}</div>
-          ))}
-        </div>
+        <div style={styles.calendarInner}>
+          {/* Weekday Headers */}
+          <div style={styles.weekdayHeader}>
+            {weekdays.map(day => (
+              <div key={day} style={styles.weekday}>{day}</div>
+            ))}
+          </div>
 
-        {/* Calendar Days */}
-        <div style={styles.calendarGrid}>
-          {calendarGrid.map((day, index) => {
-            if (!day) {
-              return <div key={`empty-${index}`} style={styles.emptyCell} />;
-            }
+          {/* Calendar Days */}
+          <div style={styles.calendarGrid}>
+            {calendarGrid.map((day, index) => {
+              if (!day) {
+                return <div key={`empty-${index}`} style={styles.emptyCell} />;
+              }
 
-            const payment = getPaymentForDay(day);
-            const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+              const payment = getPaymentForDay(day);
+              const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
 
-            return (
-              <div
-                key={format(day, 'yyyy-MM-dd')}
-                style={{
-                  ...styles.dayCell,
-                  background: getColorIntensity(payment.totalPayment),
-                  border: isToday ? '2px solid #4B6D8B' : '1px solid #E2E8F0',
-                  boxShadow: isToday ? '0 2px 8px rgba(75, 109, 139, 0.3)' : 'none'
-                }}
-              >
-                <div style={styles.dayNumber}>{format(day, 'd')}</div>
-                
-                {payment.count > 0 && (
-                  <div style={styles.paymentInfo}>
-                    <div style={styles.paymentCount}>
-                      {payment.count}
-                    </div>
-                    <div style={styles.paymentAmount}>
-                      {formatCurrency(payment.totalPayment)}
-                    </div>
-                    <div style={styles.paymentBreakdown}>
-                      <div style={styles.breakdownRow}>
-                        <span style={styles.breakdownLabel}>C:</span>
-                        <span style={styles.breakdownValue}>{formatCurrency(payment.totalCapital)}</span>
+              return (
+                <div
+                  key={format(day, 'yyyy-MM-dd')}
+                  onClick={() => payment.count > 0 && setSelectedDay(
+                    selectedDay === format(day, 'yyyy-MM-dd') ? null : format(day, 'yyyy-MM-dd')
+                  )}
+                  style={{
+                    ...styles.dayCell,
+                    background: getColorIntensity(payment.totalPayment),
+                    border: isToday ? `2px solid ${colors.primary}`
+                      : selectedDay === format(day, 'yyyy-MM-dd') ? `2px solid ${colors.accent}`
+                      : `1px solid ${colors.border}`,
+                    boxShadow: isToday ? shadows.md : selectedDay === format(day, 'yyyy-MM-dd') ? shadows.lg : 'none',
+                    cursor: payment.count > 0 ? 'pointer' : 'default'
+                  }}
+                >
+                  <div style={styles.dayNumber}>{format(day, 'd')}</div>
+
+                  {payment.count > 0 && (
+                    <div style={styles.paymentInfo}>
+                      <div style={styles.paymentCount}>
+                        {payment.count}
                       </div>
-                      <div style={styles.breakdownRow}>
-                        <span style={styles.breakdownLabel}>I:</span>
-                        <span style={styles.breakdownValue}>{formatCurrency(payment.totalInterest)}</span>
+                      <div style={styles.paymentAmount}>
+                        {formatCurrency(payment.totalPayment)}
+                      </div>
+                      <div style={styles.paymentBreakdown}>
+                        <div style={styles.breakdownRow}>
+                          <span style={styles.breakdownLabel}>C:</span>
+                          <span style={styles.breakdownValue}>{formatCurrency(payment.totalCapital)}</span>
+                        </div>
+                        <div style={styles.breakdownRow}>
+                          <span style={styles.breakdownLabel}>I:</span>
+                          <span style={styles.breakdownValue}>{formatCurrency(payment.totalInterest)}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
+
+      {/* Selected Day Detail Panel */}
+      {selectedDay && (() => {
+        const dayPayment = getPaymentForDay(new Date(selectedDay + 'T00:00:00'));
+        if (!dayPayment || dayPayment.count === 0) return null;
+        return (
+          <div style={dayDetailStyles.panel}>
+            <div style={dayDetailStyles.header}>
+              <span style={dayDetailStyles.title}>
+                {format(new Date(selectedDay + 'T00:00:00'), 'EEEE, d MMMM yyyy')}
+              </span>
+              <button onClick={() => setSelectedDay(null)} style={dayDetailStyles.closeBtn}>
+                &times;
+              </button>
+            </div>
+            <div style={dayDetailStyles.summary}>
+              {dayPayment.count} contract{dayPayment.count > 1 ? 's' : ''} &middot; {formatCurrency(dayPayment.totalPayment)} total
+            </div>
+            <div style={dayDetailStyles.list}>
+              {dayPayment.contracts.map((c, i) => (
+                <div key={i} style={dayDetailStyles.contractRow}>
+                  <div style={dayDetailStyles.contractNum}>{c.contractNumber}</div>
+                  <div style={dayDetailStyles.amounts}>
+                    <span style={dayDetailStyles.amount}>Capital: {formatCurrency(c.capitalPayment)}</span>
+                    <span style={dayDetailStyles.amount}>Interest: {formatCurrency(c.interestPayment)}</span>
+                    <span style={dayDetailStyles.total}>Total: {formatCurrency(c.totalPayment)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Legend - Compact */}
       <div style={styles.legend}>
@@ -237,288 +581,75 @@ const PaymentCalendar = ({ contracts }) => {
   );
 };
 
-const styles = {
-  container: {
-    background: 'white',
-    borderRadius: '16px',
-    padding: '24px',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)',
-    border: '1px solid #E2E8F0',
-    marginTop: '32px'
+const dayDetailStyles = {
+  panel: {
+    marginTop: '12px',
+    padding: '16px',
+    background: colors.surface,
+    borderRadius: radius.lg,
+    border: `2px solid ${colors.accent}`,
+    boxShadow: shadows.md
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '20px',
-    paddingBottom: '16px',
-    borderBottom: '2px solid #E2E8F0'
-  },
-  headerLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px'
-  },
-  iconWrapper: {
-    width: '40px',
-    height: '40px',
-    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
-    borderRadius: '10px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0
+    marginBottom: '10px'
   },
   title: {
-    margin: '0 0 2px 0',
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
     fontSize: '20px',
-    fontWeight: '700',
-    color: '#0F172A'
-  },
-  subtitle: {
-    margin: 0,
-    fontSize: '12px',
-    color: '#64748B',
-    fontWeight: '500'
-  },
-  monthNavigation: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px'
-  },
-  navButton: {
-    padding: '8px',
-    background: '#F1F5F9',
-    border: 'none',
-    borderRadius: '8px',
     cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.2s',
-    color: '#4B6D8B'
+    color: colors.textMuted,
+    padding: '0 4px'
   },
-  currentMonth: {
-    fontSize: '15px',
-    fontWeight: '700',
-    color: '#0F172A',
-    minWidth: '150px',
-    textAlign: 'center'
+  summary: {
+    fontSize: fonts.size.sm,
+    color: colors.textSecondary,
+    marginBottom: '12px',
+    paddingBottom: '10px',
+    borderBottom: `1px solid ${colors.borderLight}`
   },
-  todayButton: {
-    padding: '8px 16px',
-    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '13px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    transition: 'all 0.2s'
-  },
-  summaryGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-    gap: '12px',
-    marginBottom: '20px'
-  },
-  summaryCard: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    padding: '12px 14px',
-    background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
-    borderRadius: '10px',
-    border: '1px solid #E2E8F0'
-  },
-  summaryIcon: {
-    width: '32px',
-    height: '32px',
-    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
-    borderRadius: '8px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: 'white',
-    flexShrink: 0
-  },
-  summaryContent: {
-    flex: 1,
-    minWidth: 0
-  },
-  summaryLabel: {
-    fontSize: '10px',
-    color: '#64748B',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    marginBottom: '2px'
-  },
-  summaryValue: {
-    fontSize: '18px',
-    fontWeight: '800',
-    color: '#4B6D8B',
-    lineHeight: '1.2'
-  },
-  summaryValueSmall: {
-    fontSize: '14px',
-    fontWeight: '700',
-    color: '#0F172A',
-    lineHeight: '1.2'
-  },
-  calendarWrapper: {
-    marginBottom: '16px'
-  },
-  weekdayHeader: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(7, 1fr)',
-    gap: '6px',
-    marginBottom: '6px'
-  },
-  weekday: {
-    textAlign: 'center',
-    fontSize: '11px',
-    fontWeight: '700',
-    color: '#64748B',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    padding: '6px'
-  },
-  calendarGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(7, 1fr)',
-    gap: '6px'
-  },
-  emptyCell: {
-    aspectRatio: '1',
-    background: 'transparent'
-  },
-  dayCell: {
-    aspectRatio: '1',
-    padding: '6px',
-    borderRadius: '10px',
+  list: {
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    transition: 'all 0.2s',
-    cursor: 'pointer',
-    minHeight: '80px',
-    position: 'relative'
+    gap: '8px'
   },
-  dayNumber: {
-    fontSize: '13px',
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: '2px',
-    width: '100%',
-    textAlign: 'center'
-  },
-  paymentInfo: {
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '3px'
-  },
-  paymentCount: {
-    fontSize: '9px',
-    color: '#FFFFFF',
-    fontWeight: '700',
-    background: '#4B6D8B',
-    padding: '2px 6px',
-    borderRadius: '4px',
-    lineHeight: '1'
-  },
-  paymentAmount: {
-    fontSize: '12px',
-    fontWeight: '800',
-    color: '#1E40AF',
-    textAlign: 'center',
-    lineHeight: '1.1',
-    marginTop: '2px'
-  },
-  paymentBreakdown: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1px',
-    fontSize: '9px',
-    width: '100%',
-    marginTop: '3px'
-  },
-  breakdownRow: {
+  contractRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '1px 4px'
+    padding: '10px 12px',
+    background: colors.background,
+    borderRadius: radius.md,
+    border: `1px solid ${colors.borderLight}`,
+    flexWrap: 'wrap',
+    gap: '6px'
   },
-  breakdownLabel: {
-    color: '#64748B',
-    fontWeight: '700'
+  contractNum: {
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
+    color: colors.textPrimary
   },
-  breakdownValue: {
-    color: '#475569',
-    fontWeight: '600'
-  },
-  legend: {
+  amounts: {
     display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-    paddingTop: '16px',
-    borderTop: '1px solid #E2E8F0',
+    gap: '12px',
     flexWrap: 'wrap'
   },
-  legendSection: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px'
+  amount: {
+    fontSize: fonts.size.xs,
+    color: colors.textSecondary
   },
-  legendTitle: {
-    fontSize: '11px',
-    fontWeight: '700',
-    color: '#64748B',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px'
-  },
-  legendColors: {
-    display: 'flex',
-    gap: '10px'
-  },
-  legendItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    fontSize: '11px',
-    color: '#64748B',
-    fontWeight: '600'
-  },
-  legendBox: {
-    width: '18px',
-    height: '18px',
-    borderRadius: '4px',
-    border: '1px solid #E2E8F0'
-  },
-  legendDivider: {
-    width: '1px',
-    height: '20px',
-    background: '#E2E8F0'
-  },
-  legendNote: {
-    fontSize: '10px',
-    color: '#94A3B8',
-    fontWeight: '600'
-  },
-  loading: {
-    padding: '40px',
-    textAlign: 'center',
-    background: 'white',
-    borderRadius: '16px',
-    marginTop: '32px'
-  },
-  loadingText: {
-    fontSize: '14px',
-    color: '#64748B',
-    fontWeight: '600'
+  total: {
+    fontSize: fonts.size.xs,
+    fontWeight: fonts.weight.bold,
+    color: colors.accent
   }
 };
 

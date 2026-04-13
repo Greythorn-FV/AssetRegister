@@ -1,8 +1,10 @@
 // File: src/components/ContractDetailModal.jsx
 // Updated with Statement of Account Modal integration
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { colors, gradients, fonts, shadows, radius } from '../styles/theme.js';
+import { useIsMobile } from '../hooks/useIsMobile.js';
 import RateChangeModal from './RateChangeModal.jsx';
 import SettlementImpactModal from './SettlementImpactModal.jsx';
 import StatementOfAccountModal from './StatementOfAccountModal.jsx'; // NEW
@@ -11,6 +13,16 @@ import ContractEditSection from './ContractDetail/ContractEditSection.jsx';
 import { useContractDetail } from '../hooks/useContractDetail.js';
 
 const ContractDetailModal = ({ contract, isOpen, onClose, onUpdate }) => {
+  const isMobile = useIsMobile();
+  const styles = getStyles(isMobile);
+
+  useEffect(() => {
+    if (isOpen && isMobile) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [isOpen, isMobile]);
+
   const {
     isEditing,
     editData,
@@ -28,6 +40,8 @@ const ContractDetailModal = ({ contract, isOpen, onClose, onUpdate }) => {
     handleSettleVehicleClick,
     handleConfirmSettlement,
     handleQuickSettleVehicle,
+    handleUnsettleVehicle,
+    handleUpdateVehicleNote,
     handleDeleteContract,
     openRateChangeModal,
     closeRateChangeModal,
@@ -47,7 +61,7 @@ const ContractDetailModal = ({ contract, isOpen, onClose, onUpdate }) => {
   return (
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Header with Greythorn gradient */}
+        {/* Header with premium theme gradient */}
         <div style={styles.header}>
           <div style={styles.headerContent}>
             <div style={styles.titleSection}>
@@ -89,6 +103,8 @@ const ContractDetailModal = ({ contract, isOpen, onClose, onUpdate }) => {
               onEditClick={handleEditClick}
               onDeleteContract={handleDeleteContract}
               onSettleVehicle={handleQuickSettleVehicle}
+              onUnsettleVehicle={handleUnsettleVehicle}
+              onUpdateVehicleNote={handleUpdateVehicleNote}
               onSettleVehicleWithImpact={handleSettleVehicleClick}
               onUpdateRate={openRateChangeModal}
               onViewStatement={openStatementModal} // NEW
@@ -135,7 +151,7 @@ const ContractDetailModal = ({ contract, isOpen, onClose, onUpdate }) => {
   );
 };
 
-const styles = {
+const getStyles = (m) => ({
   overlay: {
     position: 'fixed',
     top: 0,
@@ -145,26 +161,26 @@ const styles = {
     background: 'rgba(0, 0, 0, 0.6)',
     backdropFilter: 'blur(8px)',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: m ? 'stretch' : 'center',
     justifyContent: 'center',
     zIndex: 1000,
     animation: 'fadeIn 0.2s ease-out'
   },
   modal: {
-    background: 'white',
-    borderRadius: '20px',
-    width: '95%',
-    maxWidth: '1400px',
-    height: '90vh',
+    background: colors.surface,
+    borderRadius: m ? 0 : radius.xl,
+    width: m ? '100%' : '95%',
+    maxWidth: m ? 'none' : '1400px',
+    height: m ? '100vh' : '90vh',
     overflow: 'hidden',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    boxShadow: m ? 'none' : shadows.xl,
     animation: 'slideUp 0.3s ease-out',
     display: 'flex',
     flexDirection: 'column'
   },
   header: {
-    background: 'linear-gradient(135deg, #4B6D8B 0%, #6B8CAE 100%)',
-    padding: '28px 32px',
+    background: gradients.primary,
+    padding: m ? '16px' : '28px 32px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -182,9 +198,9 @@ const styles = {
     gap: '12px'
   },
   title: {
-    fontSize: '26px',
-    fontWeight: '700',
-    color: 'white',
+    fontSize: m ? fonts.size['2xl'] : fonts.size['3xl'],
+    fontWeight: fonts.weight.bold,
+    color: colors.textOnDark,
     margin: 0,
     letterSpacing: '-0.02em'
   },
@@ -195,19 +211,19 @@ const styles = {
     flexWrap: 'wrap'
   },
   contractNumber: {
-    fontSize: '15px',
+    fontSize: fonts.size.md,
     color: 'rgba(255, 255, 255, 0.95)',
-    fontWeight: '600',
-    background: 'rgba(255, 255, 255, 0.15)',
+    fontWeight: fonts.weight.semibold,
+    background: 'rgba(255, 255, 255, 0.12)',
     padding: '6px 14px',
-    borderRadius: '8px',
+    borderRadius: radius.md,
     backdropFilter: 'blur(10px)'
   },
   statusPill: {
-    fontSize: '13px',
-    fontWeight: '700',
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.bold,
     padding: '6px 14px',
-    borderRadius: '8px',
+    borderRadius: radius.md,
     textTransform: 'uppercase',
     letterSpacing: '0.5px'
   },
@@ -222,43 +238,43 @@ const styles = {
     border: '1px solid rgba(255, 255, 255, 0.3)'
   },
   closeButton: {
-    background: 'rgba(255, 255, 255, 0.2)',
+    background: 'rgba(255, 255, 255, 0.12)',
     border: 'none',
-    borderRadius: '12px',
+    borderRadius: radius.lg,
     width: '44px',
     height: '44px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     cursor: 'pointer',
-    color: 'white',
+    color: colors.textOnDark,
     transition: 'all 0.2s',
     backdropFilter: 'blur(10px)'
   },
   content: {
     flex: 1,
     overflow: 'auto',
-    padding: '32px',
-    background: '#FAFBFC'
+    padding: m ? '16px' : '32px',
+    background: colors.surfaceHover
   },
   errorAlert: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
     padding: '16px 20px',
-    background: '#FEE2E2',
-    border: '2px solid #FCA5A5',
-    borderRadius: '12px',
+    background: colors.errorLight,
+    border: `2px solid ${colors.errorBorder}`,
+    borderRadius: radius.lg,
     marginBottom: '24px'
   },
   errorIcon: {
     fontSize: '20px'
   },
   errorText: {
-    color: '#991B1B',
-    fontWeight: '600',
-    fontSize: '14px'
+    color: colors.errorText,
+    fontWeight: fonts.weight.semibold,
+    fontSize: fonts.size.base
   }
-};
+});
 
 export default ContractDetailModal;

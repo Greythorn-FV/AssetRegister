@@ -2,6 +2,7 @@
 // Fixed interest input fields - NO PLACEHOLDERS
 
 import React from 'react';
+import { colors, fonts, radius } from '../../styles/theme.js';
 
 const FixedInterestFields = ({ formData, onInputChange }) => {
   return (
@@ -32,21 +33,21 @@ const styles = {
   label: {
     display: 'block',
     marginBottom: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#1e293b',
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
+    color: colors.textPrimary,
     letterSpacing: '-0.01em'
   },
   input: {
     width: '100%',
     padding: '12px 14px',
-    border: '2px solid #e2e8f0',
-    borderRadius: '10px',
-    fontSize: '14px',
+    border: `2px solid ${colors.border}`,
+    borderRadius: radius.md,
+    fontSize: fonts.size.base,
     outline: 'none',
     transition: 'all 0.2s ease',
     fontFamily: 'inherit',
-    background: '#ffffff'
+    background: colors.surface
   },
   inputWrapper: {
     position: 'relative'
@@ -56,14 +57,14 @@ const styles = {
     left: '14px',
     top: '50%',
     transform: 'translateY(-50%)',
-    fontSize: '14px',
-    color: '#64748b',
-    fontWeight: '600',
+    fontSize: fonts.size.base,
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.semibold,
     pointerEvents: 'none'
   },
   helpText: {
-    fontSize: '12px',
-    color: '#64748b',
+    fontSize: fonts.size.sm,
+    color: colors.textSecondary,
     marginTop: '6px',
     fontStyle: 'italic'
   }

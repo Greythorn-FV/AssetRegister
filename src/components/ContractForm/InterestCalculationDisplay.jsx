@@ -2,6 +2,7 @@
 // Simplified interest calculation display
 
 import React from 'react';
+import { colors, fonts, radius, shadows } from '../../styles/theme.js';
 import { formatCurrency } from '../../utils/currencyHelpers.js';
 import { calculateExactInterest } from '../../utils/interestCalculator.js';
 
@@ -92,16 +93,16 @@ const InterestCalculationDisplay = ({ formData }) => {
 
 const styles = {
   calculatedInterest: {
-    background: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)',
-    border: '2px solid #86EFAC',
-    borderRadius: '12px',
+    background: `linear-gradient(135deg, ${colors.successLight} 0%, ${colors.successLight} 100%)`,
+    border: `2px solid ${colors.successBorder}`,
+    borderRadius: radius.lg,
     padding: '20px',
     marginTop: '20px'
   },
   calculationTitle: {
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#065F46',
+    fontSize: fonts.size.lg,
+    fontWeight: fonts.weight.bold,
+    color: colors.successText,
     marginBottom: '16px',
     display: 'flex',
     alignItems: 'center',
@@ -118,19 +119,19 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '10px 14px',
-    background: 'white',
-    borderRadius: '8px',
-    border: '1px solid #BBF7D0'
+    background: colors.surface,
+    borderRadius: radius.md,
+    border: `1px solid ${colors.successBorder}`
   },
   stepLabel: {
-    fontSize: '13px',
-    color: '#047857',
-    fontWeight: '600'
+    fontSize: fonts.size.sm,
+    color: colors.success,
+    fontWeight: fonts.weight.semibold
   },
   stepValue: {
-    fontSize: '14px',
-    fontWeight: '700',
-    color: '#065F46'
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.bold,
+    color: colors.successText
   },
   methodNote: {
     display: 'flex',
@@ -138,89 +139,89 @@ const styles = {
     gap: '10px',
     padding: '12px',
     background: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: '8px',
+    borderRadius: radius.md,
     marginBottom: '16px',
-    border: '1px solid #BBF7D0'
+    border: `1px solid ${colors.successBorder}`
   },
   noteIcon: {
     fontSize: '18px',
     flexShrink: 0
   },
   noteText: {
-    fontSize: '12px',
-    color: '#047857',
-    fontWeight: '500',
+    fontSize: fonts.size.sm,
+    color: colors.success,
+    fontWeight: fonts.weight.medium,
     lineHeight: '1.5'
   },
   dateAnalysis: {
     background: 'rgba(255, 255, 255, 0.7)',
     padding: '14px',
-    borderRadius: '8px',
+    borderRadius: radius.md,
     marginBottom: '16px',
-    border: '1px solid #BBF7D0'
+    border: `1px solid ${colors.successBorder}`
   },
   dateAnalysisTitle: {
-    fontSize: '13px',
-    fontWeight: '700',
-    color: '#065F46',
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.bold,
+    color: colors.successText,
     marginBottom: '10px'
   },
   dateGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(2, 1fr)',
     gap: '8px',
-    fontSize: '12px',
-    color: '#047857',
-    fontWeight: '600'
+    fontSize: fonts.size.sm,
+    color: colors.success,
+    fontWeight: fonts.weight.semibold
   },
   calculationBreakdown: {
     background: 'rgba(255, 255, 255, 0.7)',
     padding: '14px',
-    borderRadius: '8px',
+    borderRadius: radius.md,
     marginBottom: '16px',
-    border: '1px solid #BBF7D0'
+    border: `1px solid ${colors.successBorder}`
   },
   breakdownTitle: {
-    fontSize: '13px',
-    fontWeight: '700',
-    color: '#065F46',
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.bold,
+    color: colors.successText,
     marginBottom: '10px'
   },
   breakdownRow: {
     display: 'flex',
     justifyContent: 'space-between',
     padding: '8px 0',
-    fontSize: '12px',
-    color: '#047857',
-    fontWeight: '600',
-    borderBottom: '1px solid #D1FAE5'
+    fontSize: fonts.size.sm,
+    color: colors.success,
+    fontWeight: fonts.weight.semibold,
+    borderBottom: `1px solid ${colors.successLight}`
   },
   totalInterestBox: {
-    background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)',
+    background: `linear-gradient(135deg, ${colors.successLight} 0%, ${colors.successBorder} 100%)`,
     padding: '18px',
-    borderRadius: '10px',
+    borderRadius: radius.md,
     textAlign: 'center',
-    border: '2px solid #86EFAC',
-    boxShadow: '0 4px 6px -1px rgba(6, 95, 70, 0.1)'
+    border: `2px solid ${colors.successBorder}`,
+    boxShadow: shadows.md
   },
   totalInterestLabel: {
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#047857',
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.bold,
+    color: colors.success,
     marginBottom: '8px',
     letterSpacing: '0.5px'
   },
   totalInterestValue: {
     fontSize: '32px',
-    fontWeight: '800',
-    color: '#065F46',
+    fontWeight: fonts.weight.extrabold,
+    color: colors.successText,
     marginBottom: '10px',
     letterSpacing: '-0.5px'
   },
   totalInterestNote: {
-    fontSize: '11px',
-    color: '#047857',
-    fontWeight: '500',
+    fontSize: fonts.size.xs,
+    color: colors.success,
+    fontWeight: fonts.weight.medium,
     marginTop: '4px'
   }
 };

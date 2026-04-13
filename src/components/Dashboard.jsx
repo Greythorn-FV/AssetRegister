@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, FileText, Calendar, Users, Search, Plus, Zap, Upload, BarChart3, Trash2 } from 'lucide-react';
+import { Search, Calendar } from 'lucide-react';
+import { useIsMobile } from '../hooks/useIsMobile.js';
+import { colors, gradients, fonts, shadows, radius } from '../styles/theme.js';
 import { getAllContracts, searchByRegistration, searchByContractNumber, deleteAllContracts } from '../services/firestoreService.js';
 import { calculateContractMetrics } from '../services/calculationService.js';
 import ContractModal from './ContractModal.jsx';
 import ContractDetailModal from './ContractDetailModal.jsx';
 import Header from './Header.jsx';
 import ContractImportModal from './ContractImportModal.jsx';
+import BottomNav from './BottomNav.jsx';
+import MobileMoreMenu from './MobileMoreMenu.jsx';
+import TrashModal from './TrashModal.jsx';
 
 
 const Dashboard = ({ onViewGantt, onViewReports }) => {
+  const isMobile = useIsMobile();
+  const styles = getStyles(isMobile);
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -18,6 +25,7 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
   const [selectedContract, setSelectedContract] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isTrashModalOpen, setIsTrashModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Handle delete all contracts
@@ -126,9 +134,26 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
     totalSettledVehicles: 0
   };
 
-  const filteredContracts = statusFilter === 'all' 
-    ? contracts 
+  const filteredByStatus = statusFilter === 'all'
+    ? contracts
     : contracts.filter(c => c.status === statusFilter);
+
+  // Live client-side filter: match partial text against reg, contract number, make, model
+  const filteredContracts = searchTerm.trim()
+    ? filteredByStatus.filter(c => {
+        const term = searchTerm.trim().toUpperCase();
+        const contractNum = (c.contractNumber || '').toUpperCase();
+        const vehicles = c.vehicles || [];
+        const matchesContract = contractNum.includes(term);
+        const matchesVehicle = vehicles.some(v =>
+          (v.registration || '').toUpperCase().includes(term) ||
+          (v.make || '').toUpperCase().includes(term) ||
+          (v.model || '').toUpperCase().includes(term) ||
+          (v.note || '').toUpperCase().includes(term)
+        );
+        return matchesContract || matchesVehicle;
+      })
+    : filteredByStatus;
 
   const handleSearch = async (searchTerm) => {
     if (!searchTerm) {
@@ -209,45 +234,62 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
   return (
     <div style={styles.container}>
       {/* Header with Logo */}
-      <Header title="Asset Finance Register">
-  <button onClick={onViewGantt} style={styles.ganttButton}>
-    <Calendar size={18} />
-    View Timeline
-  </button>
-  <button onClick={onViewReports} style={styles.reportsButton}>
-    <BarChart3 size={18} />
-    View Reports
-  </button>
-  <button onClick={() => setIsModalOpen(true)} style={styles.addButton}>
-    <Plus size={18} />
-    Add New Contract
-  </button>
-  <button 
-    onClick={() => setIsImportModalOpen(true)} 
-    style={{...styles.addButton, background: 'linear-gradient(135deg, #059669 0%, #047857 100%)'}}
-  >
-    <Upload size={20} />
-    Import Contracts
-  </button>
-  <button 
-    onClick={handleDeleteAllContracts} 
-    disabled={isDeleting || contracts.length === 0}
-    style={{
-      ...styles.deleteAllButton,
-      opacity: (isDeleting || contracts.length === 0) ? 0.5 : 1,
-      cursor: (isDeleting || contracts.length === 0) ? 'not-allowed' : 'pointer'
-    }}
-  >
-    <Trash2 size={18} />
-    {isDeleting ? 'Deleting...' : 'Delete All'}
-  </button>
-</Header>
+      <Header
+        title=""
+        mobileActions={
+          <MobileMoreMenu
+            onImport={() => setIsImportModalOpen(true)}
+            onDeleteAll={handleDeleteAllContracts}
+            onTrash={() => setIsTrashModalOpen(true)}
+            deleteDisabled={isDeleting || contracts.length === 0}
+            isDeleting={isDeleting}
+          />
+        }
+      >
+        <button onClick={onViewGantt} style={styles.ganttButton}>
+          <img src="/timeline.svg" alt="" style={styles.btnIcon} />
+          View Timeline
+        </button>
+        <button onClick={onViewReports} style={styles.reportsButton}>
+          <img src="/reports.svg" alt="" style={styles.btnIcon} />
+          View Reports
+        </button>
+        <button onClick={() => setIsModalOpen(true)} style={styles.addButton}>
+          <img src="/add.svg" alt="" style={styles.btnIcon} />
+          Add New Contract
+        </button>
+        <button
+          onClick={() => setIsImportModalOpen(true)}
+          style={{...styles.addButton, background: gradients.success}}
+        >
+          <img src="/import.svg" alt="" style={styles.btnIcon} />
+          Import Contracts
+        </button>
+        <button
+          onClick={handleDeleteAllContracts}
+          disabled={isDeleting || contracts.length === 0}
+          style={{
+            ...styles.deleteAllButton,
+            opacity: (isDeleting || contracts.length === 0) ? 0.5 : 1,
+            cursor: (isDeleting || contracts.length === 0) ? 'not-allowed' : 'pointer'
+          }}
+        >
+          <img src="/delete.svg" alt="" style={styles.btnIcon} />
+          {isDeleting ? 'Deleting...' : 'Delete All'}
+        </button>
+        <button
+          onClick={() => setIsTrashModalOpen(true)}
+          style={{...styles.ganttButton}}
+        >
+          Trash
+        </button>
+      </Header>
 
       {/* KPI Cards */}
       <div style={styles.kpiGrid}>
         <div style={styles.kpiCard}>
           <div style={styles.kpiIcon}>
-            <TrendingUp size={24} />
+            <img src="/capital.svg" alt="" style={styles.kpiSvg} />
           </div>
           <div style={styles.kpiContent}>
             <div style={styles.kpiLabel}>Capital Outstanding</div>
@@ -258,7 +300,7 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
 
         <div style={styles.kpiCard}>
           <div style={styles.kpiIcon}>
-            <FileText size={24} />
+            <img src="/contracts.svg" alt="" style={styles.kpiSvg} />
           </div>
           <div style={styles.kpiContent}>
             <div style={styles.kpiLabel}>Active Contracts</div>
@@ -280,7 +322,7 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
 
         <div style={styles.kpiCard}>
           <div style={styles.kpiIcon}>
-            <Zap size={24} />
+            <img src="/interest.svg" alt="" style={styles.kpiSvg} />
           </div>
           <div style={styles.kpiContent}>
             <div style={styles.kpiLabel}>Next Month Interest (EST)</div>
@@ -291,7 +333,7 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
 
         <div style={styles.kpiCard}>
           <div style={styles.kpiIcon}>
-            <Users size={24} />
+            <img src="/cars.svg" alt="" style={styles.kpiSvg} />
           </div>
           <div style={styles.kpiContent}>
             <div style={styles.kpiLabel}>Active Vehicles</div>
@@ -446,80 +488,32 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
             </div>
           </div>
         ) : (
-          <div>
+          <div style={styles.cardGrid}>
             {filteredContracts.map(contract => {
               const metrics = calculateContractMetrics(contract);
-              
+
               return (
-                <div 
+                <div
                   key={contract.id}
                   onClick={() => handleContractClick(contract)}
-                  style={styles.contractRow}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateX(4px)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px -4px rgba(75, 109, 139, 0.2), 0 4px 8px -2px rgba(0, 0, 0, 0.05)';
-                    e.currentTarget.style.borderColor = '#4B6D8B';
+                  style={styles.contractCard}
+                  onMouseEnter={isMobile ? undefined : (e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = shadows.cardHover;
+                    e.currentTarget.style.borderColor = colors.primary;
                   }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateX(0)';
-                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.04)';
-                    e.currentTarget.style.borderColor = '#E2E8F0';
+                  onMouseLeave={isMobile ? undefined : (e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = shadows.sm;
+                    e.currentTarget.style.borderColor = colors.border;
                   }}>
-                  
-                  {/* Accent line */}
-                  <div style={{
-                    ...styles.accentLine,
-                    background: contract.status === 'active' 
-                      ? 'linear-gradient(180deg, #4B6D8B, #6B8CAE)' 
-                      : 'linear-gradient(180deg, #9CA3AF, #D1D5DB)'
-                  }} />
 
-                  {/* Contract Info */}
-                  <div style={styles.contractInfo}>
-                    <div style={styles.contractHeader}>
-                      <div>
-                        <div style={styles.contractNumber}>{contract.contractNumber}</div>
-                        <div style={styles.contractMake}>{contract.vehicles?.[0]?.make || 'N/A'} {contract.vehicles?.length > 1 ? `+${contract.vehicles.length - 1}` : ''}</div>
-                      </div>
+                  {/* Card Header: Name + Badges */}
+                  <div style={styles.cardHeader}>
+                    <div style={styles.contractInfo}>
+                      <div style={styles.contractNumber}>{contract.contractNumber}</div>
+                      <div style={styles.contractMake}>{contract.vehicles?.[0]?.make || 'N/A'} {contract.vehicles?.length > 1 ? `+${contract.vehicles.length - 1}` : ''}</div>
                     </div>
-                  </div>
-
-                  {/* Vehicles Count */}
-                  <div style={styles.contractMetric}>
-                    <div style={styles.metricLabel}>VEHICLES</div>
-                    <div style={styles.metricValue}>
-                      {contract.activeVehiclesCount || 0}
-                      <span style={styles.metricTotal}>/{contract.originalVehicleCount || 0}</span>
-                    </div>
-                  </div>
-
-                  {/* Monthly Capital */}
-                  <div style={styles.contractMetric}>
-                    <div style={styles.metricLabel}>MONTHLY CAPITAL</div>
-                    <div style={styles.metricValueHighlight}>£{(metrics.currentMonthlyCapital || 0).toFixed(2)}</div>
-                    <div style={styles.metricSubtext}>+£{(metrics.monthlyInterest || 0).toFixed(2)} int.</div>
-                  </div>
-
-                  {/* Outstanding */}
-                  <div style={styles.contractMetric}>
-                    <div style={styles.metricLabel}>OUTSTANDING</div>
-                    <div style={styles.metricValueHighlight}>£{((metrics.capitalOutstanding || 0) / 1000).toFixed(1)}K</div>
-                    <div style={styles.metricSubtext}>{metrics.monthsRemaining || 0} months</div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div style={styles.contractProgress}>
-                    <div style={styles.progressBar}>
-                      <div style={{
-                        ...styles.progressFill,
-                        width: `${metrics.progress || 0}%`
-                      }} />
-                    </div>
-                    <div style={styles.progressText}>{Math.round(metrics.progress || 0)}%</div>
-                  </div>
-
-                  {/* Status Badges */}
-                  <div style={styles.contractBadges}>
                     <div style={styles.badgesContainer}>
                       <div style={{
                         ...styles.statusBadge,
@@ -527,13 +521,42 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
                       }}>
                         {contract.status}
                       </div>
-                      {contract.interestType === 'variable' && (
-                        <div style={styles.variableTypeBadge}>
-                          <Zap size={10} />
-                          VAR
-                        </div>
-                      )}
                     </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div style={styles.cardDivider} />
+
+                  {/* Metrics Grid */}
+                  <div style={styles.cardMetrics}>
+                    <div style={styles.contractMetric}>
+                      <div style={styles.metricLabel}>VEHICLES</div>
+                      <div style={styles.metricValue}>
+                        {contract.activeVehiclesCount || 0}
+                        <span style={styles.metricTotal}>/{contract.originalVehicleCount || 0}</span>
+                      </div>
+                    </div>
+                    <div style={styles.contractMetric}>
+                      <div style={styles.metricLabel}>MONTHLY</div>
+                      <div style={styles.metricValueHighlight}>£{(metrics.currentMonthlyCapital || 0).toFixed(2)}</div>
+                      <div style={styles.metricSubtext}>+£{(metrics.monthlyInterest || 0).toFixed(2)} int.</div>
+                    </div>
+                    <div style={styles.contractMetric}>
+                      <div style={styles.metricLabel}>OUTSTANDING</div>
+                      <div style={styles.metricValueHighlight}>£{((metrics.capitalOutstanding || 0) / 1000).toFixed(1)}K</div>
+                      <div style={styles.metricSubtext}>{metrics.monthsRemaining || 0} months</div>
+                    </div>
+                  </div>
+
+                  {/* Progress */}
+                  <div style={styles.cardProgress}>
+                    <div style={styles.progressBar}>
+                      <div style={{
+                        ...styles.progressFill,
+                        width: `${metrics.progress || 0}%`
+                      }} />
+                    </div>
+                    <div style={styles.progressText}>{Math.round(metrics.progress || 0)}%</div>
                   </div>
                 </div>
               );
@@ -570,450 +593,489 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
           }}
         />
       )}
+
+      {/* Trash Modal */}
+      <TrashModal
+        isOpen={isTrashModalOpen}
+        onClose={() => setIsTrashModalOpen(false)}
+        onRestore={loadContracts}
+      />
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav
+        onViewGantt={onViewGantt}
+        onViewReports={onViewReports}
+        onAddContract={() => setIsModalOpen(true)}
+      />
     </div>
   );
 };
 
-const styles = {
-  container: {
-    width: '100%',
-    margin: '0',
-    padding: '40px 60px',
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 50%, #F1F5F9 100%)'
-  },
-  ganttButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    padding: '16px 28px',
-    background: 'white',
-    color: '#4B6D8B',
-    border: '2px solid #E2E8F0',
-    borderRadius: '14px',
-    fontSize: '15px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)'
-  },
-  reportsButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    padding: '16px 28px',
-    background: 'linear-gradient(135deg, #8B5CF6, #A78BFA)',
-    color: 'white',
-    border: 'none',
-    borderRadius: '14px',
-    fontSize: '15px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)'
-  },
-  deleteAllButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    padding: '16px 28px',
-    background: 'linear-gradient(135deg, #DC2626, #B91C1C)',
-    color: 'white',
-    border: 'none',
-    borderRadius: '14px',
-    fontSize: '15px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
-  },
-  addButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    padding: '16px 28px',
-    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
-    color: 'white',
-    border: 'none',
-    borderRadius: '14px',
-    fontSize: '15px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    boxShadow: '0 4px 12px rgba(75, 109, 139, 0.3)'
-  },
-  kpiGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '20px',
-    marginBottom: '32px'
-  },
-  kpiCard: {
-    display: 'flex',
-    gap: '20px',
-    padding: '28px',
-    background: 'white',
-    borderRadius: '18px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
-    border: '1px solid rgba(0, 0, 0, 0.02)',
-    transition: 'all 0.3s'
-  },
-  kpiIcon: {
-    width: '56px',
-    height: '56px',
-    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
-    borderRadius: '16px',
+const getStyles = (m) => {
+  const btnBase = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: 'white',
-    flexShrink: 0
-  },
-  kpiContent: {
-    flex: 1
-  },
-  kpiLabel: {
-    fontSize: '12px',
-    color: '#94A3B8',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: '1px',
-    marginBottom: '6px'
-  },
-  kpiValue: {
-    fontSize: '32px',
-    fontWeight: '800',
-    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    marginBottom: '4px',
-    lineHeight: '1'
-  },
-  kpiSubtext: {
-    fontSize: '13px',
-    color: '#64748B',
-    fontWeight: '600'
-  },
-  searchSection: {
-    display: 'flex',
-    gap: '14px',
-    marginBottom: '32px'
-  },
-  searchInputContainer: {
-    flex: 1,
-    position: 'relative'
-  },
-  searchIcon: {
-    position: 'absolute',
-    left: '20px',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    color: '#94A3B8',
-    pointerEvents: 'none'
-  },
-  searchInput: {
-    width: '100%',
-    padding: '18px 20px 18px 52px',
-    fontSize: '15px',
-    border: '2px solid #E2E8F0',
-    borderRadius: '14px',
-    outline: 'none',
-    transition: 'all 0.2s',
-    background: 'white',
-    fontWeight: '500',
-    color: '#0F172A'
-  },
-  searchButton: {
-    padding: '18px 36px',
-    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
-    color: 'white',
-    border: 'none',
-    borderRadius: '14px',
-    fontSize: '15px',
-    fontWeight: '700',
+    gap: m ? '6px' : '8px',
+    padding: m ? '10px 12px' : '12px 22px',
+    borderRadius: radius.md,
+    fontSize: m ? fonts.size.sm : fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
     transition: 'all 0.2s',
-    boxShadow: '0 4px 12px rgba(75, 109, 139, 0.3)'
-  },
-  searchResultsCard: {
-    background: 'white',
-    padding: '28px',
-    borderRadius: '18px',
-    marginBottom: '32px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-    border: '2px solid #4B6D8B'
-  },
-  searchResultsHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '20px'
-  },
-  searchResultsTitle: {
-    fontSize: '18px',
-    fontWeight: '700',
-    color: '#4B6D8B'
-  },
-  clearSearchButton: {
-    padding: '8px 18px',
-    background: '#F1F5F9',
     border: 'none',
-    borderRadius: '10px',
-    fontSize: '13px',
-    fontWeight: '700',
-    color: '#64748B',
-    cursor: 'pointer',
-    transition: 'all 0.2s'
-  },
-  resultGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '16px'
-  },
-  resultItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px'
-  },
-  resultKey: {
-    fontSize: '12px',
-    color: '#718096',
-    fontWeight: '600'
-  },
-  resultValue: {
-    fontSize: '16px',
-    color: '#0F172A',
-    fontWeight: '700'
-  },
-  resultValueHighlight: {
-    fontSize: '20px',
-    color: '#4B6D8B',
-    fontWeight: '700'
-  },
-  filterTabs: {
-    display: 'flex',
-    gap: '12px',
-    marginBottom: '24px',
-    padding: '6px',
-    background: 'white',
-    borderRadius: '16px',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.02)',
-    width: 'fit-content'
-  },
-  tab: {
-    padding: '12px 24px',
-    background: 'transparent',
-    border: 'none',
-    borderRadius: '12px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#64748B',
-    transition: 'all 0.2s',
-    textTransform: 'capitalize'
-  },
-  tabActive: {
-    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
-    color: 'white',
-    boxShadow: '0 4px 12px rgba(75, 109, 139, 0.3)'
-  },
-  contractsContainer: {
-    background: 'white',
-    borderRadius: '20px',
-    padding: '32px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
-    border: '1px solid rgba(0, 0, 0, 0.02)'
-  },
-  contractsHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '28px'
-  },
-  contractsTitle: {
-    fontSize: '22px',
-    fontWeight: '700',
-    color: '#0F172A',
-    letterSpacing: '-0.5px'
-  },
-  contractCount: {
-    fontSize: '14px',
-    color: '#64748B',
-    fontWeight: '600',
-    padding: '8px 18px',
-    background: '#F1F5F9',
-    borderRadius: '10px'
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: '80px 20px'
-  },
-  emptyIcon: {
-    fontSize: '64px',
-    marginBottom: '16px'
-  },
-  emptyTitle: {
-    fontSize: '20px',
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: '8px'
-  },
-  emptyText: {
-    fontSize: '15px',
-    color: '#64748B',
-    fontWeight: '500'
-  },
-  contractRow: {
-    display: 'grid',
-    gridTemplateColumns: '4px 2fr 1fr 1.5fr 1.5fr 1.5fr 1fr',
-    alignItems: 'center',
-    gap: '24px',
-    padding: '24px',
-    marginBottom: '16px',
-    background: 'white',
-    border: '2px solid #E2E8F0',
-    borderRadius: '16px',
-    cursor: 'pointer',
-    transition: 'all 0.3s',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
-  },
-  accentLine: {
-    width: '4px',
-    height: '60px',
-    borderRadius: '999px'
-  },
-  contractInfo: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px'
-  },
-  contractHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start'
-  },
-  contractNumber: {
-    fontSize: '18px',
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: '4px'
-  },
-  contractMake: {
-    fontSize: '14px',
-    color: '#64748B',
-    fontWeight: '600'
-  },
-  contractMetric: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px'
-  },
-  metricLabel: {
-    fontSize: '10px',
-    color: '#94A3B8',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px'
-  },
-  metricValue: {
-    fontSize: '17px',
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: '2px'
-  },
-  metricTotal: {
-    fontSize: '13px',
-    color: '#94A3B8',
-    fontWeight: '600'
-  },
-  metricSubtext: {
-    fontSize: '11px',
-    color: '#64748B',
-    fontWeight: '500'
-  },
-  metricValueHighlight: {
-    fontSize: '17px',
-    fontWeight: '700',
-    color: '#4B6D8B',
-    marginBottom: '2px'
-  },
-  contractProgress: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px'
-  },
-  progressBar: {
-    width: '100%',
-    height: '8px',
-    background: '#E2E8F0',
-    borderRadius: '999px',
-    overflow: 'hidden',
-    marginBottom: '6px'
-  },
-  progressFill: {
-    height: '100%',
-    background: 'linear-gradient(90deg, #4B6D8B, #6B8CAE)',
-    borderRadius: '999px',
-    transition: 'width 0.3s'
-  },
-  progressText: {
-    fontSize: '11px',
-    color: '#4B6D8B',
-    fontWeight: '700',
-    textAlign: 'center'
-  },
-  contractBadges: {
-    display: 'flex',
-    justifyContent: 'flex-end'
-  },
-  badgesContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
-    alignItems: 'flex-end'
-  },
-  statusBadge: {
-    padding: '6px 12px',
-    borderRadius: '8px',
-    fontSize: '11px',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px'
-  },
-  statusBadgeActive: {
-    background: 'linear-gradient(135deg, #DCFCE7, #BBF7D0)',
-    color: '#166534',
-    border: '1px solid #86EFAC'
-  },
-  statusBadgeSettled: {
-    background: 'linear-gradient(135deg, #F1F5F9, #E2E8F0)',
-    color: '#475569',
-    border: '1px solid #CBD5E1'
-  },
-  variableTypeBadge: {
-    padding: '4px 10px',
-    background: 'linear-gradient(135deg, #FEF3C7, #FDE68A)',
-    borderRadius: '6px',
-    fontSize: '10px',
-    fontWeight: '700',
-    color: '#92400E',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '3px',
-    border: '1px solid #FCD34D'
-  },
-  loading: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 50%, #F1F5F9 100%)'
-  },
-  loadingText: {
-    fontSize: '18px',
-    color: '#64748B',
-    fontWeight: '600'
-  }
+    flex: m ? '1 1 auto' : undefined,
+    letterSpacing: '0.01em',
+  };
+
+  return {
+    container: {
+      width: '100%',
+      maxWidth: '100vw',
+      margin: '0',
+      padding: m ? '12px 10px 80px 10px' : '32px 48px',
+      minHeight: '100vh',
+      background: colors.background,
+      fontFamily: fonts.family,
+      overflowX: 'hidden',
+      boxSizing: 'border-box'
+    },
+    ganttButton: {
+      ...btnBase,
+      background: colors.surface,
+      color: colors.primary,
+      border: `1px solid ${colors.border}`,
+      boxShadow: shadows.sm
+    },
+    reportsButton: {
+      ...btnBase,
+      background: gradients.purple,
+      color: colors.textOnDark,
+      boxShadow: '0 2px 8px rgba(124, 58, 237, 0.25)'
+    },
+    deleteAllButton: {
+      ...btnBase,
+      background: gradients.error,
+      color: colors.textOnDark,
+      boxShadow: '0 2px 8px rgba(220, 38, 38, 0.25)'
+    },
+    addButton: {
+      ...btnBase,
+      background: gradients.primary,
+      color: colors.textOnDark,
+      boxShadow: shadows.md
+    },
+    kpiGrid: {
+      display: 'grid',
+      gridTemplateColumns: m ? 'repeat(3, 1fr)' : 'repeat(auto-fit, minmax(220px, 1fr))',
+      gap: m ? '6px' : '16px',
+      marginBottom: m ? '12px' : '28px'
+    },
+    kpiCard: {
+      display: 'flex',
+      flexDirection: m ? 'column' : 'row',
+      alignItems: m ? 'center' : undefined,
+      textAlign: m ? 'center' : undefined,
+      gap: m ? '4px' : '16px',
+      padding: m ? '8px 4px' : '20px',
+      background: colors.surface,
+      borderRadius: radius.lg,
+      boxShadow: shadows.card,
+      border: `1px solid ${colors.borderLight}`,
+      transition: 'all 0.2s'
+    },
+    kpiIcon: {
+      width: m ? '28px' : '48px',
+      height: m ? '28px' : '48px',
+      background: gradients.primary,
+      borderRadius: radius.md,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: colors.accent,
+      flexShrink: 0
+    },
+    kpiContent: {
+      flex: 1,
+      minWidth: 0
+    },
+    kpiLabel: {
+      fontSize: m ? '8px' : fonts.size.xs,
+      color: colors.textMuted,
+      fontWeight: fonts.weight.semibold,
+      textTransform: 'uppercase',
+      letterSpacing: '0.08em',
+      marginBottom: m ? '2px' : '4px'
+    },
+    kpiValue: {
+      fontSize: m ? '14px' : fonts.size['3xl'],
+      fontWeight: fonts.weight.extrabold,
+      color: colors.primary,
+      marginBottom: '2px',
+      lineHeight: '1.1'
+    },
+    kpiSubtext: {
+      fontSize: m ? '8px' : fonts.size.sm,
+      color: colors.textSecondary,
+      fontWeight: fonts.weight.medium
+    },
+    searchSection: {
+      display: 'flex',
+      flexDirection: m ? 'column' : 'row',
+      gap: m ? '8px' : '12px',
+      marginBottom: m ? '16px' : '24px',
+      maxWidth: '100%'
+    },
+    searchInputContainer: {
+      flex: 1,
+      position: 'relative',
+      minWidth: 0
+    },
+    searchIcon: {
+      position: 'absolute',
+      left: m ? '12px' : '16px',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      color: colors.textMuted,
+      pointerEvents: 'none'
+    },
+    searchInput: {
+      width: '100%',
+      padding: m ? '12px 12px 12px 38px' : '14px 16px 14px 48px',
+      fontSize: fonts.size.base,
+      border: `1px solid ${colors.border}`,
+      borderRadius: radius.md,
+      outline: 'none',
+      transition: 'all 0.2s',
+      background: colors.surface,
+      fontWeight: fonts.weight.normal,
+      color: colors.textPrimary,
+      boxSizing: 'border-box',
+      fontFamily: fonts.family
+    },
+    searchButton: {
+      padding: m ? '12px 16px' : '14px 28px',
+      background: gradients.primary,
+      color: colors.textOnDark,
+      border: 'none',
+      borderRadius: radius.md,
+      fontSize: fonts.size.base,
+      fontWeight: fonts.weight.semibold,
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      boxShadow: shadows.md,
+      width: m ? '100%' : undefined
+    },
+    searchResultsCard: {
+      background: colors.surface,
+      padding: m ? '14px' : '24px',
+      borderRadius: radius.lg,
+      marginBottom: m ? '16px' : '24px',
+      boxShadow: shadows.md,
+      border: `2px solid ${colors.accent}`
+    },
+    searchResultsHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: m ? '12px' : '16px'
+    },
+    searchResultsTitle: {
+      fontSize: m ? fonts.size.base : fonts.size.xl,
+      fontWeight: fonts.weight.bold,
+      color: colors.primary
+    },
+    clearSearchButton: {
+      padding: '6px 14px',
+      background: colors.background,
+      border: `1px solid ${colors.border}`,
+      borderRadius: radius.md,
+      fontSize: fonts.size.sm,
+      fontWeight: fonts.weight.semibold,
+      color: colors.textSecondary,
+      cursor: 'pointer',
+      transition: 'all 0.2s'
+    },
+    resultGrid: {
+      display: 'grid',
+      gridTemplateColumns: m ? '1fr 1fr' : 'repeat(auto-fit, minmax(180px, 1fr))',
+      gap: m ? '10px' : '14px'
+    },
+    resultItem: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '2px'
+    },
+    resultKey: {
+      fontSize: fonts.size.xs,
+      color: colors.textMuted,
+      fontWeight: fonts.weight.medium
+    },
+    resultValue: {
+      fontSize: m ? fonts.size.base : fonts.size.lg,
+      color: colors.textPrimary,
+      fontWeight: fonts.weight.bold
+    },
+    resultValueHighlight: {
+      fontSize: m ? fonts.size.lg : fonts.size.xl,
+      color: colors.accent,
+      fontWeight: fonts.weight.bold
+    },
+    filterTabs: {
+      display: 'flex',
+      gap: m ? '4px' : '8px',
+      marginBottom: m ? '14px' : '20px',
+      padding: '4px',
+      background: colors.surface,
+      borderRadius: radius.lg,
+      boxShadow: shadows.sm,
+      border: `1px solid ${colors.borderLight}`,
+      width: m ? '100%' : 'fit-content',
+      overflowX: m ? 'auto' : undefined
+    },
+    tab: {
+      padding: m ? '8px 12px' : '10px 20px',
+      background: 'transparent',
+      border: 'none',
+      borderRadius: radius.md,
+      cursor: 'pointer',
+      fontSize: m ? fonts.size.sm : fonts.size.base,
+      fontWeight: fonts.weight.medium,
+      color: colors.textSecondary,
+      transition: 'all 0.2s',
+      whiteSpace: 'nowrap',
+      flex: m ? '1 1 auto' : undefined,
+      textAlign: 'center'
+    },
+    tabActive: {
+      background: gradients.primary,
+      color: colors.textOnDark,
+      boxShadow: shadows.md,
+      fontWeight: fonts.weight.semibold
+    },
+    contractsContainer: {
+      background: colors.surface,
+      borderRadius: radius.xl,
+      padding: m ? '14px' : '28px',
+      boxShadow: shadows.card,
+      border: `1px solid ${colors.borderLight}`
+    },
+    contractsHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: m ? '14px' : '24px'
+    },
+    contractsTitle: {
+      fontSize: m ? fonts.size.lg : fonts.size['2xl'],
+      fontWeight: fonts.weight.bold,
+      color: colors.textPrimary,
+      letterSpacing: '-0.02em'
+    },
+    contractCount: {
+      fontSize: m ? fonts.size.xs : fonts.size.sm,
+      color: colors.textMuted,
+      fontWeight: fonts.weight.medium,
+      padding: m ? '4px 10px' : '6px 14px',
+      background: colors.background,
+      borderRadius: radius.md,
+      border: `1px solid ${colors.borderLight}`
+    },
+    emptyState: {
+      textAlign: 'center',
+      padding: m ? '40px 16px' : '80px 20px'
+    },
+    emptyIcon: {
+      fontSize: m ? '48px' : '64px',
+      marginBottom: '16px'
+    },
+    emptyTitle: {
+      fontSize: m ? fonts.size.xl : fonts.size['2xl'],
+      fontWeight: fonts.weight.bold,
+      color: colors.textPrimary,
+      marginBottom: '8px'
+    },
+    emptyText: {
+      fontSize: fonts.size.base,
+      color: colors.textSecondary,
+      fontWeight: fonts.weight.normal
+    },
+    cardGrid: {
+      display: 'grid',
+      gridTemplateColumns: m ? '1fr 1fr' : 'repeat(auto-fill, minmax(220px, 1fr))',
+      gap: m ? '6px' : '10px'
+    },
+    contractCard: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: m ? '5px' : '8px',
+      padding: m ? '8px' : '12px',
+      background: colors.surface,
+      border: `1px solid ${colors.border}`,
+      borderTop: `2px solid ${colors.accent}`,
+      borderRadius: radius.md,
+      cursor: 'pointer',
+      transition: 'all 0.2s',
+      overflow: 'hidden',
+      minWidth: 0,
+      boxShadow: shadows.sm
+    },
+    cardHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: '4px'
+    },
+    cardDivider: {
+      height: '1px',
+      background: colors.borderLight
+    },
+    cardMetrics: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr 1fr',
+      gap: m ? '4px' : '6px'
+    },
+    cardProgress: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
+    },
+    contractInfo: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '2px'
+    },
+    contractHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start'
+    },
+    contractNumber: {
+      fontSize: m ? fonts.size.sm : fonts.size.base,
+      fontWeight: fonts.weight.semibold,
+      color: colors.textSecondary,
+      letterSpacing: '-0.01em'
+    },
+    contractMake: {
+      fontSize: m ? '10px' : fonts.size.xs,
+      color: colors.textMuted,
+      fontWeight: fonts.weight.medium
+    },
+    contractMetric: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '1px',
+      overflow: 'hidden',
+      minWidth: 0
+    },
+    metricLabel: {
+      fontSize: m ? '8px' : '9px',
+      color: colors.textMuted,
+      fontWeight: fonts.weight.semibold,
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em'
+    },
+    metricValue: {
+      fontSize: m ? fonts.size.xs : fonts.size.sm,
+      fontWeight: fonts.weight.semibold,
+      color: colors.textSecondary
+    },
+    metricTotal: {
+      fontSize: m ? '10px' : fonts.size.xs,
+      color: colors.textMuted,
+      fontWeight: fonts.weight.medium
+    },
+    metricSubtext: {
+      fontSize: m ? '10px' : fonts.size.xs,
+      color: colors.textMuted,
+      fontWeight: fonts.weight.normal
+    },
+    metricValueHighlight: {
+      fontSize: m ? fonts.size.xs : fonts.size.sm,
+      fontWeight: fonts.weight.semibold,
+      color: colors.accent
+    },
+    progressBar: {
+      flex: 1,
+      height: '6px',
+      background: colors.borderLight,
+      borderRadius: radius.full,
+      overflow: 'hidden'
+    },
+    progressFill: {
+      height: '100%',
+      background: gradients.accent,
+      borderRadius: radius.full,
+      transition: 'width 0.3s'
+    },
+    progressText: {
+      fontSize: fonts.size.xs,
+      color: colors.textMuted,
+      fontWeight: fonts.weight.medium,
+      textAlign: 'center'
+    },
+    contractBadges: {
+      display: 'flex',
+      justifyContent: 'flex-end'
+    },
+    badgesContainer: {
+      display: 'flex',
+      flexDirection: m ? 'row' : 'column',
+      gap: '4px',
+      alignItems: m ? 'center' : 'flex-end'
+    },
+    statusBadge: {
+      padding: '2px 7px',
+      borderRadius: radius.sm,
+      fontSize: '9px',
+      fontWeight: fonts.weight.bold,
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em'
+    },
+    statusBadgeActive: {
+      background: colors.successLight,
+      color: colors.successText,
+      border: `1px solid ${colors.successBorder}`
+    },
+    statusBadgeSettled: {
+      background: colors.settledBg,
+      color: colors.settled,
+      border: `1px solid ${colors.borderDark}`
+    },
+    variableTypeBadge: {
+      padding: '2px 6px',
+      background: colors.warningLight,
+      borderRadius: radius.sm,
+      fontSize: '9px',
+      fontWeight: fonts.weight.bold,
+      color: colors.warningText,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '3px',
+      border: `1px solid ${colors.warningBorder}`
+    },
+    btnIcon: {
+      width: m ? '16px' : '18px',
+      height: m ? '16px' : '18px',
+      flexShrink: 0
+    },
+    kpiSvg: {
+      width: m ? '14px' : '24px',
+      height: m ? '14px' : '24px'
+    },
+    loading: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '100vh',
+      background: colors.background
+    },
+    loadingText: {
+      fontSize: fonts.size.xl,
+      color: colors.textSecondary,
+      fontWeight: fonts.weight.medium
+    }
+  };
 };
 
 export default Dashboard;

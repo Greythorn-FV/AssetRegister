@@ -3,6 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { useIsMobile } from '../hooks/useIsMobile.js';
+import BottomNav from './BottomNav.jsx';
 import { getAllContracts } from '../services/firestoreService.js';
 import { calculateContractMetrics } from '../services/calculationService.js';
 import { formatMonthYear } from '../utils/dateHelpers.js';
@@ -10,8 +12,11 @@ import { formatCurrency } from '../utils/currencyHelpers.js';
 import { addMonths, parseISO, format } from 'date-fns';
 import Header from './Header.jsx';
 import PaymentCalendar from './PaymentCalendar.jsx';
+import { colors, gradients, fonts, shadows, radius } from '../styles/theme.js';
 
-const GanttChart = ({ onBack }) => {
+const GanttChart = ({ onBack, onViewReports }) => {
+  const isMobile = useIsMobile();
+  const styles = getStyles(isMobile);
   const [contracts, setContracts] = useState([]);
   const [months, setMonths] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -123,7 +128,7 @@ const GanttChart = ({ onBack }) => {
   if (contracts.length === 0) {
     return (
       <div style={styles.container}>
-        <Header title="Timeline View">
+        <Header title="">
           <button onClick={onBack} style={styles.backButton}>
             <ArrowLeft size={20} />
             Back to Dashboard
@@ -138,7 +143,7 @@ const GanttChart = ({ onBack }) => {
 
   return (
     <div style={styles.container}>
-      <Header title="Timeline View">
+      <Header title="" onBack={onBack}>
         <button onClick={onBack} style={styles.backButton}>
           <ArrowLeft size={20} />
           Back to Dashboard
@@ -242,223 +247,233 @@ const GanttChart = ({ onBack }) => {
 
       {/* PAYMENT CALENDAR - NEW SECTION */}
       <PaymentCalendar contracts={contracts} />
+
+      <BottomNav
+        onViewGantt={null}
+        onViewReports={onViewReports}
+        onAddContract={onBack}
+      />
     </div>
   );
 };
 
-const styles = {
+const getStyles = (m) => ({
   container: {
     width: '100%',
+    maxWidth: '100vw',
     margin: '0',
-    padding: '40px 60px',
+    padding: m ? '12px 8px 80px 8px' : '40px 60px',
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 50%, #F1F5F9 100%)'
+    background: gradients.surface,
+    overflowX: 'hidden',
+    boxSizing: 'border-box'
   },
   backButton: {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
-    padding: '16px 28px',
-    background: 'white',
-    color: '#4B6D8B',
-    border: '2px solid #E2E8F0',
-    borderRadius: '14px',
-    fontSize: '15px',
-    fontWeight: '700',
+    gap: '8px',
+    padding: m ? '10px 16px' : '16px 28px',
+    background: colors.surface,
+    color: colors.primary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.md,
+    fontSize: m ? fonts.size.sm : fonts.size.md,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
     transition: 'all 0.2s',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)'
+    boxShadow: shadows.sm
   },
   tableWrapper: {
-    background: 'white',
-    borderRadius: '20px',
+    background: colors.surface,
+    borderRadius: m ? radius.lg : radius.xl,
     padding: '0',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+    boxShadow: shadows.md,
     overflow: 'hidden'
   },
   tableContainer: {
     overflowX: 'auto',
     overflowY: 'auto',
-    maxHeight: '70vh'
+    maxHeight: m ? '60vh' : '70vh',
+    WebkitOverflowScrolling: 'touch'
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    fontSize: '13px'
+    fontSize: m ? '11px' : '13px'
   },
   stickyHeader: {
     position: 'sticky',
     top: 0,
     left: 0,
     zIndex: 30,
-    background: '#4B6D8B',
-    color: 'white',
-    padding: '12px 16px',
+    background: colors.primary,
+    color: colors.textOnDark,
+    padding: m ? '8px 10px' : '12px 16px',
     textAlign: 'left',
-    fontWeight: '700',
-    fontSize: '12px',
+    fontWeight: fonts.weight.bold,
+    fontSize: m ? '10px' : fonts.size.sm,
     textTransform: 'uppercase',
-    borderRight: '2px solid #3A5A73',
-    minWidth: '150px',
-    maxWidth: '150px'
+    borderRight: `2px solid ${colors.primaryMed}`,
+    minWidth: m ? '100px' : '150px',
+    maxWidth: m ? '100px' : '150px'
   },
   monthHeader: {
     position: 'sticky',
     top: 0,
     zIndex: 20,
-    background: '#4B6D8B',
-    color: 'white',
-    padding: '12px 8px',
+    background: colors.primary,
+    color: colors.textOnDark,
+    padding: m ? '8px 4px' : '12px 8px',
     textAlign: 'center',
-    fontWeight: '700',
-    fontSize: '11px',
+    fontWeight: fonts.weight.bold,
+    fontSize: m ? '9px' : fonts.size.xs,
     textTransform: 'uppercase',
-    borderRight: '1px solid #5A7C95',
-    minWidth: '100px'
+    borderRight: `1px solid ${colors.primaryMed}`,
+    minWidth: m ? '65px' : '100px'
   },
   row: {
-    borderBottom: '1px solid #E2E8F0'
+    borderBottom: `1px solid ${colors.border}`
   },
   stickyCell: {
     position: 'sticky',
     left: 0,
     zIndex: 10,
-    background: 'white',
-    padding: '12px 16px',
-    borderRight: '2px solid #E2E8F0',
-    minWidth: '150px',
-    maxWidth: '150px'
+    background: colors.surface,
+    padding: m ? '8px 10px' : '12px 16px',
+    borderRight: `2px solid ${colors.border}`,
+    minWidth: m ? '100px' : '150px',
+    maxWidth: m ? '100px' : '150px'
   },
   contractInfo: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '4px'
+    gap: '2px'
   },
   contractNumber: {
-    fontWeight: '600',
-    fontSize: '14px',
-    color: '#1A202C'
+    fontWeight: fonts.weight.semibold,
+    fontSize: m ? fonts.size.xs : fonts.size.base,
+    color: colors.textPrimary
   },
   vehicleInfo: {
-    fontSize: '11px',
-    color: '#718096'
+    fontSize: m ? '10px' : fonts.size.xs,
+    color: colors.textSecondary
   },
   cell: {
-    padding: '4px',
+    padding: m ? '2px' : '4px',
     textAlign: 'center',
-    borderRight: '1px solid #E2E8F0',
-    minWidth: '100px'
+    borderRight: `1px solid ${colors.border}`,
+    minWidth: m ? '65px' : '100px'
   },
   cellContent: {
-    padding: '8px 4px',
-    borderRadius: '4px',
-    fontWeight: '600',
-    fontSize: '12px',
+    padding: m ? '4px 2px' : '8px 4px',
+    borderRadius: radius.sm,
+    fontWeight: fonts.weight.semibold,
+    fontSize: m ? '10px' : fonts.size.sm,
     cursor: 'pointer'
   },
   cellPast: {
-    background: '#C6F6D5',
-    color: '#22543D'
+    background: colors.successLight,
+    color: colors.successText
   },
   cellCurrent: {
-    background: '#FED7AA',
-    color: '#7C2D12',
-    border: '2px solid #F97316'
+    background: colors.warningLight,
+    color: colors.warningText,
+    border: `2px solid ${colors.warning}`
   },
   cellFuture: {
-    background: '#DBEAFE',
-    color: '#1E3A8A'
+    background: colors.infoLight,
+    color: colors.info
   },
   cellEmpty: {
-    padding: '8px 4px',
-    color: '#E2E8F0'
+    padding: m ? '4px 2px' : '8px 4px',
+    color: colors.border
   },
   totalRow: {
     position: 'sticky',
     bottom: 0,
     zIndex: 15,
-    background: '#F7FAFC',
-    borderTop: '3px solid #4B6D8B'
+    background: colors.background,
+    borderTop: `3px solid ${colors.primary}`
   },
   stickyCellTotal: {
     position: 'sticky',
     left: 0,
     zIndex: 20,
-    background: '#4B6D8B',
-    padding: '12px 16px',
-    borderRight: '2px solid #3A5A73'
+    background: colors.primary,
+    padding: m ? '8px 10px' : '12px 16px',
+    borderRight: `2px solid ${colors.primaryMed}`
   },
   totalLabel: {
-    fontWeight: '700',
-    fontSize: '12px',
-    color: 'white',
+    fontWeight: fonts.weight.bold,
+    fontSize: m ? '10px' : fonts.size.sm,
+    color: colors.textOnDark,
     textTransform: 'uppercase',
     letterSpacing: '0.05em'
   },
   cellTotal: {
-    padding: '4px',
+    padding: m ? '2px' : '4px',
     textAlign: 'center',
-    borderRight: '1px solid #E2E8F0'
+    borderRight: `1px solid ${colors.border}`
   },
   totalValue: {
-    padding: '8px 4px',
-    fontWeight: '700',
-    fontSize: '13px',
-    color: '#1A202C',
-    background: '#EDF2F7',
-    borderRadius: '4px'
+    padding: m ? '4px 2px' : '8px 4px',
+    fontWeight: fonts.weight.bold,
+    fontSize: m ? '10px' : '13px',
+    color: colors.textPrimary,
+    background: colors.borderLight,
+    borderRadius: radius.sm
   },
   legend: {
-    marginTop: '24px',
-    padding: '20px',
-    background: 'white',
-    borderRadius: '16px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+    marginTop: m ? '12px' : '24px',
+    padding: m ? '12px' : '20px',
+    background: colors.surface,
+    borderRadius: radius.lg,
+    boxShadow: shadows.sm
   },
   legendTitle: {
-    fontWeight: '700',
-    fontSize: '14px',
-    marginBottom: '12px',
-    color: '#1A202C'
+    fontWeight: fonts.weight.bold,
+    fontSize: m ? fonts.size.sm : fonts.size.base,
+    marginBottom: '8px',
+    color: colors.textPrimary
   },
   legendItems: {
     display: 'flex',
-    gap: '24px',
+    gap: m ? '12px' : '24px',
     flexWrap: 'wrap'
   },
   legendItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    fontSize: '13px',
-    color: '#4A5568'
+    gap: '6px',
+    fontSize: m ? fonts.size.xs : '13px',
+    color: colors.textSecondary
   },
   legendBox: {
-    width: '24px',
-    height: '24px',
-    borderRadius: '4px'
+    width: m ? '16px' : '24px',
+    height: m ? '16px' : '24px',
+    borderRadius: radius.sm
   },
   loading: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 50%, #F1F5F9 100%)'
+    background: gradients.surface
   },
   loadingText: {
-    fontSize: '18px',
-    color: '#64748B',
-    fontWeight: '600'
+    fontSize: fonts.size.xl,
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.medium
   },
   empty: {
-    background: 'white',
-    borderRadius: '20px',
-    padding: '60px',
+    background: colors.surface,
+    borderRadius: radius.xl,
+    padding: m ? '40px 16px' : '60px',
     textAlign: 'center',
-    color: '#94A3B8',
-    fontSize: '16px',
-    fontWeight: '500'
+    color: colors.textMuted,
+    fontSize: fonts.size.lg,
+    fontWeight: fonts.weight.medium
   }
-};
+});
 
 export default GanttChart;

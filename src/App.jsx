@@ -19,11 +19,17 @@ function App() {
       )}
       
       {view === 'gantt' && (
-        <GanttChart onBack={() => setView('dashboard')} />
+        <GanttChart
+          onBack={() => setView('dashboard')}
+          onViewReports={() => setView('reports')}
+        />
       )}
 
       {view === 'reports' && (
-        <ReportsPage onBack={() => setView('dashboard')} /> // ADD THIS SECTION
+        <ReportsPage
+          onBack={() => setView('dashboard')}
+          onViewGantt={() => setView('gantt')}
+        />
       )}
     </div>
   );

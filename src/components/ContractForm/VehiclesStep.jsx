@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { Car } from 'lucide-react';
+import { colors, fonts } from '../../styles/theme.js';
 import VehiclesInputSection from './VehiclesInputSection.jsx';
 
 const VehiclesStep = ({ 
@@ -14,7 +15,7 @@ const VehiclesStep = ({
   return (
     <div>
       <div style={styles.sectionHeader}>
-        <Car size={20} style={{color: '#667eea'}} />
+        <Car size={20} style={{color: colors.accent}} />
         <span>Vehicles on this contract</span>
       </div>
 
@@ -34,9 +35,9 @@ const styles = {
     alignItems: 'center',
     gap: '12px',
     marginBottom: '20px',
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#1e293b'
+    fontSize: fonts.size.lg,
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary
   }
 };
 

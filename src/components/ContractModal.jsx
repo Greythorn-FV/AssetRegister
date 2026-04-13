@@ -1,19 +1,31 @@
 // File: src/components/ContractModal.jsx
-// Two-step modal with Greythorn brand colors
+// Two-step modal with premium theme
 
 import React, { useState, useEffect } from 'react';
 import { X, ArrowRight, ArrowLeft, CheckCircle2, FileText, Car } from 'lucide-react';
+import { colors, gradients, fonts, shadows, radius } from '../styles/theme.js';
 import { useContractForm } from '../hooks/useContractForm.js';
+import { useIsMobile } from '../hooks/useIsMobile.js';
 import FinancingStep from './ContractForm/FinancingStep.jsx';
 import VehiclesStep from './ContractForm/VehiclesStep.jsx';
 
 const ContractModal = ({ isOpen, onClose, onSuccess }) => {
+  const isMobile = useIsMobile();
+  const s = getStyles(isMobile);
   const [currentStep, setCurrentStep] = useState(1);
 
   // Reset to step 1 whenever the modal opens
   useEffect(() => {
     if (isOpen) setCurrentStep(1);
   }, [isOpen]);
+
+  // Lock body scroll on mobile when modal is open
+  useEffect(() => {
+    if (isOpen && isMobile) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [isOpen, isMobile]);
 
   const {
     formData,
@@ -75,50 +87,50 @@ const ContractModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   return (
-    <div style={styles.overlay} onClick={handleClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Greythorn Gradient Header */}
-        <div style={styles.header}>
-          <div style={styles.headerContent}>
-            <div style={styles.stepIndicator}>
+    <div style={s.overlay} onClick={handleClose}>
+      <div style={s.modal} onClick={(e) => e.stopPropagation()}>
+        {/* Premium Theme Header */}
+        <div style={s.header}>
+          <div style={s.headerContent}>
+            <div style={s.stepIndicator}>
               <div style={{
-                ...styles.stepDot,
-                ...(currentStep === 1 ? styles.stepDotActive : styles.stepDotComplete)
+                ...s.stepDot,
+                ...(currentStep === 1 ? s.stepDotActive : s.stepDotComplete)
               }}>
                 {currentStep > 1 ? <CheckCircle2 size={16} /> : '1'}
               </div>
-              <div style={styles.stepLine}></div>
+              <div style={s.stepLine}></div>
               <div style={{
-                ...styles.stepDot,
-                ...(currentStep === 2 ? styles.stepDotActive : {})
+                ...s.stepDot,
+                ...(currentStep === 2 ? s.stepDotActive : {})
               }}>
                 2
               </div>
             </div>
-            <h2 style={styles.title}>
+            <h2 style={s.title}>
               {currentStep === 1 ? (
                 <><FileText size={24} style={{marginRight: '12px'}} />Financing Details</>
               ) : (
                 <><Car size={24} style={{marginRight: '12px'}} />Vehicle Information</>
               )}
             </h2>
-            <p style={styles.subtitle}>
+            <p style={s.subtitle}>
               {currentStep === 1 
                 ? 'Contract terms and interest details'
                 : 'Add vehicles to this finance agreement'
               }
             </p>
           </div>
-          <button onClick={handleClose} style={styles.closeButton}>
+          <button onClick={handleClose} style={s.closeButton}>
             <X size={24} />
           </button>
         </div>
 
         {/* Form Content */}
-        <div style={styles.content}>
+        <div style={s.content}>
           {error && (
-            <div style={styles.errorBanner}>
-              <div style={styles.errorIcon}>⚠️</div>
+            <div style={s.errorBanner}>
+              <div style={s.errorIcon}>⚠️</div>
               <div>{error}</div>
             </div>
           )}
@@ -141,13 +153,13 @@ const ContractModal = ({ isOpen, onClose, onSuccess }) => {
             )}
 
             {/* Navigation Footer */}
-            <div style={styles.footer}>
+            <div style={s.footer}>
               {currentStep === 1 ? (
                 <>
                   <button
                     type="button"
                     onClick={handleClose}
-                    style={styles.cancelButton}
+                    style={s.cancelButton}
                   >
                     Cancel
                   </button>
@@ -155,7 +167,7 @@ const ContractModal = ({ isOpen, onClose, onSuccess }) => {
                     type="button"
                     onClick={handleNext}
                     style={{
-                      ...styles.nextButton,
+                      ...s.nextButton,
                       opacity: validateStep1() ? 1 : 0.5,
                       cursor: validateStep1() ? 'pointer' : 'not-allowed'
                     }}
@@ -170,7 +182,7 @@ const ContractModal = ({ isOpen, onClose, onSuccess }) => {
                   <button
                     type="button"
                     onClick={handleBack}
-                    style={styles.backButton}
+                    style={s.backButton}
                     disabled={loading}
                   >
                     <ArrowLeft size={18} style={{marginRight: '8px'}} />
@@ -178,7 +190,7 @@ const ContractModal = ({ isOpen, onClose, onSuccess }) => {
                   </button>
                   <button
                     type="submit"
-                    style={styles.submitButton}
+                    style={s.submitButton}
                     disabled={loading || !validateVehicles()}
                   >
                     {loading ? 'Adding Contract...' : 'Complete & Add Contract'}
@@ -193,7 +205,7 @@ const ContractModal = ({ isOpen, onClose, onSuccess }) => {
   );
 };
 
-const styles = {
+const getStyles = (m) => ({
   overlay: {
     position: 'fixed',
     top: 0,
@@ -203,24 +215,25 @@ const styles = {
     background: 'rgba(0, 0, 0, 0.6)',
     backdropFilter: 'blur(8px)',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: m ? 'stretch' : 'center',
     justifyContent: 'center',
     zIndex: 1000
   },
   modal: {
-    background: 'white',
-    borderRadius: '20px',
-    width: '90%',
-    maxWidth: '700px',
-    maxHeight: '90vh',
+    background: colors.surface,
+    borderRadius: m ? 0 : radius.xl,
+    width: m ? '100%' : '90%',
+    maxWidth: m ? 'none' : '700px',
+    maxHeight: m ? '100vh' : '90vh',
+    height: m ? '100vh' : undefined,
     overflow: 'hidden',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)',
+    boxShadow: m ? 'none' : shadows.xl,
     display: 'flex',
     flexDirection: 'column'
   },
   header: {
-    background: 'linear-gradient(135deg, #4B6D8B 0%, #6B8CAE 100%)',
-    padding: '32px',
+    background: gradients.primary,
+    padding: m ? '12px 14px' : '32px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start'
@@ -231,34 +244,34 @@ const styles = {
   stepIndicator: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    marginBottom: '20px'
+    gap: m ? '6px' : '8px',
+    marginBottom: m ? '8px' : '20px'
   },
   stepDot: {
-    width: '36px',
-    height: '36px',
+    width: m ? '28px' : '36px',
+    height: m ? '28px' : '36px',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '14px',
-    fontWeight: '700',
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.bold,
     background: 'rgba(255, 255, 255, 0.2)',
     color: 'rgba(255, 255, 255, 0.6)',
     border: '2px solid rgba(255, 255, 255, 0.3)',
     transition: 'all 0.3s ease'
   },
   stepDotActive: {
-    background: 'white',
-    color: '#4B6D8B',
-    border: '2px solid white',
+    background: colors.surface,
+    color: colors.primary,
+    border: `2px solid ${colors.surface}`,
     transform: 'scale(1.1)',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+    boxShadow: shadows.lg
   },
   stepDotComplete: {
-    background: 'rgba(134, 239, 172, 0.9)',
-    color: '#065f46',
-    border: '2px solid #86efac'
+    background: colors.successBorder,
+    color: colors.successText,
+    border: `2px solid ${colors.successBorder}`
   },
   stepLine: {
     flex: 1,
@@ -268,31 +281,31 @@ const styles = {
     maxWidth: '80px'
   },
   title: {
-    fontSize: '26px',
-    fontWeight: '700',
-    color: 'white',
+    fontSize: m ? fonts.size.lg : fonts.size['3xl'],
+    fontWeight: fonts.weight.bold,
+    color: colors.textOnDark,
     margin: 0,
     marginBottom: '8px',
     display: 'flex',
     alignItems: 'center'
   },
   subtitle: {
-    fontSize: '14px',
-    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: fonts.size.base,
+    color: colors.textOnDarkMuted,
     margin: 0
   },
   closeButton: {
-    background: 'rgba(255, 255, 255, 0.15)',
+    background: 'rgba(255, 255, 255, 0.12)',
     border: 'none',
-    borderRadius: '10px',
+    borderRadius: radius.md,
     cursor: 'pointer',
     padding: '8px',
-    color: 'white',
+    color: colors.textOnDark,
     backdropFilter: 'blur(10px)',
     transition: 'all 0.2s ease'
   },
   content: {
-    padding: '32px',
+    padding: m ? '12px' : '32px',
     overflowY: 'auto',
     flex: 1
   },
@@ -301,13 +314,13 @@ const styles = {
     alignItems: 'center',
     gap: '12px',
     padding: '16px',
-    background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-    borderRadius: '12px',
+    background: `linear-gradient(135deg, ${colors.errorLight} 0%, ${colors.errorBorder} 100%)`,
+    borderRadius: radius.lg,
     marginBottom: '24px',
-    fontSize: '14px',
-    color: '#991b1b',
-    fontWeight: '500',
-    border: '1px solid #fca5a5'
+    fontSize: fonts.size.base,
+    color: colors.errorText,
+    fontWeight: fonts.weight.medium,
+    border: `1px solid ${colors.errorBorder}`
   },
   errorIcon: {
     fontSize: '20px'
@@ -316,60 +329,60 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     gap: '12px',
-    marginTop: '32px',
-    paddingTop: '24px',
-    borderTop: '2px solid #f1f5f9'
+    marginTop: m ? '20px' : '32px',
+    paddingTop: m ? '16px' : '24px',
+    borderTop: `2px solid ${colors.borderLight}`
   },
   cancelButton: {
     padding: '12px 24px',
-    background: '#f1f5f9',
+    background: colors.background,
     border: 'none',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.md,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
-    color: '#475569',
+    color: colors.textSecondary,
     transition: 'all 0.2s ease'
   },
   backButton: {
     padding: '12px 24px',
-    background: '#f1f5f9',
+    background: colors.background,
     border: 'none',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.md,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
-    color: '#475569',
+    color: colors.textSecondary,
     display: 'flex',
     alignItems: 'center',
     transition: 'all 0.2s ease'
   },
   nextButton: {
     padding: '12px 28px',
-    background: 'linear-gradient(135deg, #4B6D8B 0%, #6B8CAE 100%)',
-    color: 'white',
+    background: gradients.primary,
+    color: colors.textOnDark,
     border: 'none',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.md,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    boxShadow: '0 4px 12px rgba(75, 109, 139, 0.3)',
+    boxShadow: shadows.lg,
     transition: 'all 0.2s ease'
   },
   submitButton: {
     padding: '12px 28px',
-    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-    color: 'white',
+    background: gradients.success,
+    color: colors.textOnDark,
     border: 'none',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.md,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+    boxShadow: shadows.lg,
     transition: 'all 0.2s ease'
   }
-};
+});
 
 export default ContractModal;

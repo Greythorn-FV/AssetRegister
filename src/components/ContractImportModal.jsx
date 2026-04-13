@@ -2,17 +2,29 @@
 // Historic Contract Import System - PRODUCTION READY
 // Updated: Added Net Price and Gross Price columns
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Download } from 'lucide-react';
 import { addContract } from '../services/firestoreService.js';
+import { useIsMobile } from '../hooks/useIsMobile.js';
+import { colors, gradients, fonts, shadows, radius } from '../styles/theme.js';
 
 const ContractImportModal = ({ isOpen, onClose, onImportComplete }) => {
+  const isMobile = useIsMobile();
   const [file, setFile] = useState(null);
   const [parsedData, setParsedData] = useState(null);
   const [validationErrors, setValidationErrors] = useState([]);
   const [importStatus, setImportStatus] = useState('idle');
   const [importResults, setImportResults] = useState(null);
   const [dragActive, setDragActive] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && isMobile) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [isOpen, isMobile]);
+
+  const styles = getStyles(isMobile);
 
   if (!isOpen) return null;
 
@@ -564,7 +576,7 @@ MULTI001,100000,fixed,10000,,,36,01/01/2024,EE33FFF,Ford,Focus,settled,15/11/202
   );
 };
 
-const styles = {
+const getStyles = (m) => ({
   overlay: {
     position: 'fixed',
     top: 0,
@@ -573,54 +585,55 @@ const styles = {
     bottom: 0,
     background: 'rgba(0, 0, 0, 0.6)',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: m ? 'stretch' : 'center',
     justifyContent: 'center',
     zIndex: 1000,
     backdropFilter: 'blur(4px)'
   },
   modal: {
-    background: 'white',
-    borderRadius: '16px',
-    width: '90%',
-    maxWidth: '800px',
-    maxHeight: '90vh',
+    background: colors.surface,
+    borderRadius: m ? 0 : radius.xl,
+    width: m ? '100%' : '90%',
+    maxWidth: m ? 'none' : '800px',
+    maxHeight: m ? '100vh' : '90vh',
+    height: m ? '100vh' : undefined,
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
-    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)'
+    boxShadow: m ? 'none' : shadows.xl
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '24px',
-    borderBottom: '1px solid #e2e8f0',
-    background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)'
+    padding: m ? '16px' : '24px',
+    borderBottom: `1px solid ${colors.border}`,
+    background: gradients.primary
   },
   title: {
-    fontSize: '20px',
-    fontWeight: '700',
-    color: 'white',
+    fontSize: m ? fonts.size['2xl'] : fonts.size['2xl'],
+    fontWeight: fonts.weight.bold,
+    color: colors.textOnDark,
     margin: 0
   },
   subtitle: {
-    fontSize: '14px',
-    color: '#94a3b8',
+    fontSize: fonts.size.base,
+    color: colors.textOnDarkMuted,
     margin: '4px 0 0 0'
   },
   closeButton: {
-    background: 'rgba(255,255,255,0.1)',
+    background: 'rgba(255, 255, 255, 0.12)',
     border: 'none',
-    color: 'white',
+    color: colors.textOnDark,
     cursor: 'pointer',
     padding: '8px',
-    borderRadius: '8px',
+    borderRadius: radius.md,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center'
   },
   content: {
-    padding: '24px',
+    padding: m ? '16px' : '24px',
     overflowY: 'auto'
   },
   templateButton: {
@@ -628,38 +641,38 @@ const styles = {
     alignItems: 'center',
     gap: '8px',
     padding: '12px 20px',
-    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
-    color: 'white',
+    background: gradients.primary,
+    color: colors.textOnDark,
     border: 'none',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.md,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
     marginBottom: '20px'
   },
   dropzone: {
-    border: '2px dashed #cbd5e1',
-    borderRadius: '12px',
+    border: `2px dashed ${colors.borderDark}`,
+    borderRadius: radius.lg,
     padding: '48px',
     textAlign: 'center',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     position: 'relative',
-    background: '#f8fafc'
+    background: colors.background
   },
   dropzoneActive: {
-    borderColor: '#4B6D8B',
-    background: '#f0f9ff'
+    borderColor: colors.primary,
+    background: colors.surfaceHover
   },
   dropzoneTitle: {
-    fontSize: '18px',
-    fontWeight: '600',
-    color: '#1e293b',
+    fontSize: fonts.size.xl,
+    fontWeight: fonts.weight.semibold,
+    color: colors.textPrimary,
     margin: '16px 0 8px 0'
   },
   dropzoneSubtitle: {
-    fontSize: '14px',
-    color: '#64748b'
+    fontSize: fonts.size.base,
+    color: colors.textSecondary
   },
   fileInput: {
     position: 'absolute',
@@ -671,18 +684,18 @@ const styles = {
     cursor: 'pointer'
   },
   errorBox: {
-    background: '#fef2f2',
-    borderRadius: '12px',
+    background: colors.errorLight,
+    borderRadius: radius.lg,
     padding: '20px',
-    border: '1px solid #fecaca'
+    border: `1px solid ${colors.errorBorder}`
   },
   errorHeader: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#991b1b',
+    fontSize: fonts.size.lg,
+    fontWeight: fonts.weight.semibold,
+    color: colors.errorText,
     marginBottom: '12px'
   },
   errorList: {
@@ -691,38 +704,38 @@ const styles = {
     marginBottom: '16px'
   },
   errorItem: {
-    fontSize: '13px',
-    color: '#dc2626',
+    fontSize: fonts.size.sm,
+    color: colors.error,
     padding: '6px 0',
-    borderBottom: '1px solid #fecaca'
+    borderBottom: `1px solid ${colors.errorBorder}`
   },
   resetButton: {
     padding: '10px 18px',
-    background: '#dc2626',
-    color: 'white',
+    background: colors.error,
+    color: colors.textOnDark,
     border: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.md,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer'
   },
   preview: {
-    background: '#f8fafc',
-    borderRadius: '12px',
+    background: colors.background,
+    borderRadius: radius.lg,
     padding: '20px'
   },
   previewHeader: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#065f46',
+    fontSize: fonts.size.lg,
+    fontWeight: fonts.weight.semibold,
+    color: colors.successText,
     marginBottom: '16px'
   },
   previewTable: {
-    background: 'white',
-    borderRadius: '8px',
+    background: colors.surface,
+    borderRadius: radius.md,
     overflow: 'hidden',
     marginBottom: '20px'
   },
@@ -731,52 +744,52 @@ const styles = {
     borderCollapse: 'collapse'
   },
   th: {
-    background: '#f1f5f9',
+    background: colors.borderLight,
     padding: '12px',
     textAlign: 'left',
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#475569',
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.bold,
+    color: colors.textSecondary,
     textTransform: 'uppercase'
   },
   tr: {
-    borderBottom: '1px solid #e2e8f0'
+    borderBottom: `1px solid ${colors.border}`
   },
   td: {
     padding: '12px',
-    fontSize: '14px',
-    color: '#1e293b'
+    fontSize: fonts.size.base,
+    color: colors.textPrimary
   },
   contractNumber: {
-    fontWeight: '600',
+    fontWeight: fonts.weight.semibold,
     marginBottom: '4px'
   },
   vehicleList: {
-    fontSize: '12px',
-    color: '#64748b'
+    fontSize: fonts.size.sm,
+    color: colors.textSecondary
   },
   badgeFixed: {
     padding: '4px 10px',
-    background: '#dbeafe',
-    color: '#1e40af',
-    borderRadius: '6px',
-    fontSize: '12px',
-    fontWeight: '600'
+    background: colors.infoLight,
+    color: colors.info,
+    borderRadius: radius.sm,
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.semibold
   },
   badgeVariable: {
     padding: '4px 10px',
-    background: '#fef3c7',
-    color: '#92400e',
-    borderRadius: '6px',
-    fontSize: '12px',
-    fontWeight: '600'
+    background: colors.warningLight,
+    color: colors.warningText,
+    borderRadius: radius.sm,
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.semibold
   },
   tableFooter: {
     padding: '12px',
     textAlign: 'center',
-    fontSize: '13px',
-    color: '#64748b',
-    background: '#f8fafc'
+    fontSize: fonts.size.sm,
+    color: colors.textSecondary,
+    background: colors.background
   },
   actions: {
     display: 'flex',
@@ -785,22 +798,22 @@ const styles = {
   },
   cancelButton: {
     padding: '12px 24px',
-    background: '#e2e8f0',
-    color: '#475569',
+    background: colors.background,
+    color: colors.textSecondary,
     border: 'none',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.md,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer'
   },
   importButton: {
     padding: '12px 24px',
-    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-    color: 'white',
+    background: gradients.success,
+    color: colors.textOnDark,
     border: 'none',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.md,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer'
   },
   importingBox: {
@@ -810,8 +823,8 @@ const styles = {
   spinner: {
     width: '48px',
     height: '48px',
-    border: '4px solid #e2e8f0',
-    borderTop: '4px solid #4B6D8B',
+    border: `4px solid ${colors.border}`,
+    borderTop: `4px solid ${colors.primary}`,
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
     margin: '0 auto 16px'
@@ -821,38 +834,38 @@ const styles = {
     padding: '48px'
   },
   completeTitle: {
-    fontSize: '20px',
-    fontWeight: '700',
-    color: '#065f46',
+    fontSize: fonts.size['2xl'],
+    fontWeight: fonts.weight.bold,
+    color: colors.successText,
     margin: '16px 0 8px'
   },
   completeStats: {
-    fontSize: '14px',
-    color: '#64748b',
+    fontSize: fonts.size.base,
+    color: colors.textSecondary,
     marginBottom: '24px'
   },
   importErrors: {
-    background: '#fef2f2',
-    borderRadius: '8px',
+    background: colors.errorLight,
+    borderRadius: radius.md,
     padding: '12px',
     marginBottom: '24px',
     textAlign: 'left'
   },
   importError: {
-    fontSize: '12px',
-    color: '#dc2626',
+    fontSize: fonts.size.sm,
+    color: colors.error,
     padding: '4px 0'
   },
   doneButton: {
     padding: '12px 32px',
-    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-    color: 'white',
+    background: gradients.success,
+    color: colors.textOnDark,
     border: 'none',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.md,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer'
   }
-};
+});
 
 export default ContractImportModal;

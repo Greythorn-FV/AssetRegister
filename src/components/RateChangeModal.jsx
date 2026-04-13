@@ -1,13 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { updateContract } from '../services/firestoreService.js';
 import { formatCurrency } from '../utils/currencyHelpers.js';
+import { useIsMobile } from '../hooks/useIsMobile.js';
+import { colors, gradients, fonts, shadows, radius } from '../styles/theme.js';
 
 const RateChangeModal = ({ contract, isOpen, onClose, onSuccess }) => {
+  const isMobile = useIsMobile();
   const [newBaseRate, setNewBaseRate] = useState('');
   const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen && isMobile) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [isOpen, isMobile]);
+
+  const styles = getStyles(isMobile);
 
   if (!isOpen || !contract) return null;
 
@@ -184,7 +196,7 @@ const RateChangeModal = ({ contract, isOpen, onClose, onSuccess }) => {
   );
 };
 
-const styles = {
+const getStyles = (m) => ({
   overlay: {
     position: 'fixed',
     top: 0,
@@ -193,78 +205,79 @@ const styles = {
     bottom: 0,
     background: 'rgba(0, 0, 0, 0.5)',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: m ? 'stretch' : 'center',
     justifyContent: 'center',
     zIndex: 1100
   },
   modal: {
-    background: 'white',
-    borderRadius: '12px',
-    width: '90%',
-    maxWidth: '600px',
-    maxHeight: '90vh',
+    background: colors.surface,
+    borderRadius: m ? 0 : radius.lg,
+    width: m ? '100%' : '90%',
+    maxWidth: m ? 'none' : '600px',
+    maxHeight: m ? '100vh' : '90vh',
+    height: m ? '100vh' : undefined,
     overflow: 'auto',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+    boxShadow: m ? 'none' : shadows.xl
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '24px',
-    borderBottom: '1px solid #E2E8F0'
+    padding: m ? '16px' : '24px',
+    borderBottom: `1px solid ${colors.border}`
   },
   title: {
-    fontSize: '24px',
-    fontWeight: '700',
-    color: '#1A202C'
+    fontSize: m ? fonts.size['2xl'] : fonts.size['3xl'],
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary
   },
   closeButton: {
     background: 'none',
     border: 'none',
     cursor: 'pointer',
     padding: '4px',
-    color: '#718096'
+    color: colors.textMuted
   },
   content: {
-    padding: '24px'
+    padding: m ? '16px' : '24px'
   },
   infoBox: {
     display: 'flex',
     gap: '12px',
     padding: '16px',
-    background: '#DBEAFE',
-    border: '1px solid #93C5FD',
-    borderRadius: '8px',
+    background: colors.infoLight,
+    border: `1px solid ${colors.infoBorder}`,
+    borderRadius: radius.md,
     marginBottom: '24px',
-    color: '#1E3A8A'
+    color: colors.info
   },
   currentRateBox: {
-    background: '#F7FAFC',
+    background: colors.background,
     padding: '16px',
-    borderRadius: '8px',
+    borderRadius: radius.md,
     marginBottom: '24px',
-    border: '1px solid #E2E8F0'
+    border: `1px solid ${colors.border}`
   },
   rateItem: {
     display: 'flex',
     justifyContent: 'space-between',
     padding: '8px 0',
-    borderBottom: '1px solid #E2E8F0'
+    borderBottom: `1px solid ${colors.border}`
   },
   rateLabel: {
-    fontSize: '14px',
-    color: '#718096',
-    fontWeight: '500'
+    fontSize: fonts.size.base,
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.medium
   },
   rateValue: {
-    fontSize: '14px',
-    color: '#1A202C',
-    fontWeight: '600'
+    fontSize: fonts.size.base,
+    color: colors.textPrimary,
+    fontWeight: fonts.weight.semibold
   },
   rateValueHighlight: {
-    fontSize: '16px',
-    color: '#3182CE',
-    fontWeight: '700'
+    fontSize: fonts.size.lg,
+    color: colors.info,
+    fontWeight: fonts.weight.bold
   },
   formGroup: {
     marginBottom: '20px'
@@ -272,31 +285,31 @@ const styles = {
   label: {
     display: 'block',
     marginBottom: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#4A5568'
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
+    color: colors.textSecondary
   },
   input: {
     width: '100%',
     padding: '10px 12px',
-    border: '1px solid #E2E8F0',
-    borderRadius: '6px',
-    fontSize: '14px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.sm,
+    fontSize: fonts.size.base,
     outline: 'none'
   },
   newRateBox: {
     padding: '20px',
-    borderRadius: '8px',
+    borderRadius: radius.md,
     marginTop: '20px',
     border: '2px solid'
   },
   rateIncrease: {
-    background: '#FEF2F2',
-    borderColor: '#FCA5A5'
+    background: colors.errorLight,
+    borderColor: colors.errorBorder
   },
   rateDecrease: {
-    background: '#F0FDF4',
-    borderColor: '#86EFAC'
+    background: colors.successLight,
+    borderColor: colors.successBorder
   },
   impactHeader: {
     display: 'flex',
@@ -305,26 +318,26 @@ const styles = {
     marginBottom: '16px'
   },
   impactTitle: {
-    fontSize: '18px',
-    fontWeight: '700'
+    fontSize: fonts.size.xl,
+    fontWeight: fonts.weight.bold
   },
   newRateDetails: {
     marginBottom: '16px'
   },
   impactNote: {
     padding: '12px',
-    background: 'white',
-    borderRadius: '6px',
-    fontSize: '13px',
-    fontWeight: '500'
+    background: colors.surface,
+    borderRadius: radius.sm,
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.medium
   },
   error: {
-    background: '#FED7D7',
-    color: '#C53030',
+    background: colors.errorLight,
+    color: colors.errorText,
     padding: '12px',
-    borderRadius: '6px',
+    borderRadius: radius.sm,
     marginBottom: '16px',
-    fontSize: '14px'
+    fontSize: fonts.size.base
   },
   footer: {
     display: 'flex',
@@ -332,28 +345,28 @@ const styles = {
     gap: '12px',
     marginTop: '24px',
     paddingTop: '24px',
-    borderTop: '1px solid #E2E8F0'
+    borderTop: `1px solid ${colors.border}`
   },
   cancelButton: {
     padding: '10px 20px',
-    background: '#EDF2F7',
+    background: colors.background,
     border: 'none',
-    borderRadius: '6px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.sm,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
-    color: '#4A5568'
+    color: colors.textSecondary
   },
   submitButton: {
     padding: '10px 20px',
-    background: '#3182CE',
-    color: 'white',
+    background: gradients.primary,
+    color: colors.textOnDark,
     border: 'none',
-    borderRadius: '6px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.sm,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer'
   }
-};
+});
 
 export default RateChangeModal;

@@ -1,12 +1,13 @@
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
   getDoc,
-  getDocs, 
-  query, 
+  getDocs,
+  setDoc,
+  query,
   where,
   orderBy,
   Timestamp
@@ -230,8 +231,67 @@ export const settleVehicle = async (contractId, registration, settlementDate = n
   }
 };
 
+// Update a note on a vehicle
+export const updateVehicleNote = async (contractId, registration, note) => {
+  try {
+    const contract = await getContractById(contractId);
+    const updatedVehicles = contract.vehicles.map(v => {
+      if (v.registration.toUpperCase() === registration.toUpperCase()) {
+        return { ...v, note: note || '' };
+      }
+      return v;
+    });
+    await updateContract(contractId, { vehicles: updatedVehicles });
+  } catch (error) {
+    console.error('Error updating vehicle note:', error);
+    throw new Error('Failed to update vehicle note');
+  }
+};
+
+// Undo vehicle settlement — restore vehicle to active
+export const unsettleVehicle = async (contractId, registration) => {
+  try {
+    const contract = await getContractById(contractId);
+
+    const updatedVehicles = contract.vehicles.map(v => {
+      if (v.registration.toUpperCase() === registration.toUpperCase() && v.status === 'settled') {
+        return {
+          ...v,
+          status: 'active',
+          settledDate: null,
+          settledAtMonth: null
+        };
+      }
+      return v;
+    });
+
+    const activeCount = updatedVehicles.filter(v => v.status === 'active').length;
+    const currentMonthlyCapital = contract.perVehicleCapitalRate * activeCount;
+
+    await updateContract(contractId, {
+      vehicles: updatedVehicles,
+      activeVehiclesCount: activeCount,
+      currentMonthlyCapital,
+      status: 'active'
+    });
+  } catch (error) {
+    console.error('Error unsettling vehicle:', error);
+    throw new Error('Failed to undo vehicle settlement');
+  }
+};
+
+// Soft delete — move contract to deletedContracts collection
+const DELETED_COLLECTION = 'deletedContracts';
+
 export const deleteContract = async (contractId) => {
   try {
+    const contract = await getContractById(contractId);
+    // Copy to deleted collection with timestamp
+    await setDoc(doc(db, DELETED_COLLECTION, contractId), {
+      ...contract,
+      deletedAt: Timestamp.now()
+    });
+    // Remove from active collection
     await deleteDoc(doc(db, CONTRACTS_COLLECTION, contractId));
   } catch (error) {
     console.error('Error deleting contract:', error);
@@ -243,16 +303,69 @@ export const deleteAllContracts = async () => {
   try {
     const contractsRef = collection(db, CONTRACTS_COLLECTION);
     const snapshot = await getDocs(contractsRef);
-    
-    const deletePromises = snapshot.docs.map(docSnapshot => 
-      deleteDoc(doc(db, CONTRACTS_COLLECTION, docSnapshot.id))
-    );
-    await Promise.all(deletePromises);
-    
+
+    for (const docSnapshot of snapshot.docs) {
+      const data = docSnapshot.data();
+      await setDoc(doc(db, DELETED_COLLECTION, docSnapshot.id), {
+        ...data,
+        deletedAt: Timestamp.now()
+      });
+      await deleteDoc(doc(db, CONTRACTS_COLLECTION, docSnapshot.id));
+    }
+
     return snapshot.size;
   } catch (error) {
     console.error('Error deleting all contracts:', error);
     throw new Error('Failed to delete all contracts: ' + error.message);
+  }
+};
+
+// Get deleted contracts from trash
+export const getDeletedContracts = async () => {
+  try {
+    const deletedRef = collection(db, DELETED_COLLECTION);
+    const snapshot = await getDocs(deletedRef);
+    const contracts = [];
+    snapshot.forEach((docSnap) => {
+      contracts.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    contracts.sort((a, b) => {
+      const aTime = a.deletedAt?.toMillis?.() || 0;
+      const bTime = b.deletedAt?.toMillis?.() || 0;
+      return bTime - aTime;
+    });
+    return contracts;
+  } catch (error) {
+    console.error('Error getting deleted contracts:', error);
+    throw new Error('Failed to load deleted contracts');
+  }
+};
+
+// Restore a contract from trash
+export const restoreContract = async (contractId) => {
+  try {
+    const docRef = doc(db, DELETED_COLLECTION, contractId);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) throw new Error('Deleted contract not found');
+
+    const data = docSnap.data();
+    delete data.deletedAt;
+
+    await setDoc(doc(db, CONTRACTS_COLLECTION, contractId), data);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Error restoring contract:', error);
+    throw new Error('Failed to restore contract');
+  }
+};
+
+// Permanently delete from trash
+export const permanentlyDeleteContract = async (contractId) => {
+  try {
+    await deleteDoc(doc(db, DELETED_COLLECTION, contractId));
+  } catch (error) {
+    console.error('Error permanently deleting contract:', error);
+    throw new Error('Failed to permanently delete contract');
   }
 };
 

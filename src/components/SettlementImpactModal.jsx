@@ -1,10 +1,12 @@
 // File: src/components/SettlementImpactModal.jsx
 // Shows EXACT impact of settling a vehicle on any day of the month
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, Calendar, TrendingDown, DollarSign } from 'lucide-react';
 import { formatCurrency } from '../utils/currencyHelpers.js';
 import { getMonthsRemaining } from '../utils/dateHelpers.js';
+import { useIsMobile } from '../hooks/useIsMobile.js';
+import { colors, gradients, fonts, shadows, radius } from '../styles/theme.js';
 
 // Helper function to get days in month (since date-fns might not be available)
 const getDaysInMonth = (date) => {
@@ -25,10 +27,20 @@ const addMonths = (date, months) => {
 };
 
 const SettlementImpactModal = ({ contract, vehicle, isOpen, onClose, onConfirm }) => {
+  const isMobile = useIsMobile();
   const [settlementDate, setSettlementDate] = useState(
     new Date().toISOString().split('T')[0]
   );
-  
+
+  useEffect(() => {
+    if (isOpen && isMobile) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [isOpen, isMobile]);
+
+  const styles = getStyles(isMobile);
+
   // Calculate impact - MUST be before the early return to follow React Hooks rules
   const impact = useMemo(() => {
     if (!contract || !vehicle) return null;
@@ -289,7 +301,7 @@ const SettlementImpactModal = ({ contract, vehicle, isOpen, onClose, onConfirm }
   );
 };
 
-const styles = {
+const getStyles = (m) => ({
   overlay: {
     position: 'fixed',
     top: 0,
@@ -298,57 +310,58 @@ const styles = {
     bottom: 0,
     background: 'rgba(0, 0, 0, 0.5)',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: m ? 'stretch' : 'center',
     justifyContent: 'center',
     zIndex: 1200
   },
   modal: {
-    background: 'white',
-    borderRadius: '12px',
-    width: '90%',
-    maxWidth: '700px',
-    maxHeight: '90vh',
+    background: colors.surface,
+    borderRadius: m ? 0 : radius.lg,
+    width: m ? '100%' : '90%',
+    maxWidth: m ? 'none' : '700px',
+    maxHeight: m ? '100vh' : '90vh',
+    height: m ? '100vh' : undefined,
     overflow: 'auto',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+    boxShadow: m ? 'none' : shadows.xl
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '24px',
-    borderBottom: '1px solid #E2E8F0'
+    padding: m ? '16px' : '24px',
+    borderBottom: `1px solid ${colors.border}`
   },
   title: {
-    fontSize: '24px',
-    fontWeight: '700',
-    color: '#1A202C'
+    fontSize: m ? fonts.size['2xl'] : fonts.size['3xl'],
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary
   },
   closeButton: {
     background: 'none',
     border: 'none',
     cursor: 'pointer',
     padding: '4px',
-    color: '#718096'
+    color: colors.textMuted
   },
   content: {
-    padding: '24px'
+    padding: m ? '16px' : '24px'
   },
   vehicleInfo: {
     padding: '16px',
-    background: '#F7FAFC',
-    borderRadius: '8px',
+    background: colors.background,
+    borderRadius: radius.md,
     marginBottom: '24px',
     textAlign: 'center'
   },
   vehicleReg: {
-    fontSize: '24px',
-    fontWeight: '700',
-    color: '#1A202C',
+    fontSize: fonts.size['3xl'],
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary,
     marginBottom: '4px'
   },
   vehicleMake: {
-    fontSize: '14px',
-    color: '#718096'
+    fontSize: fonts.size.base,
+    color: colors.textSecondary
   },
   formGroup: {
     marginBottom: '24px'
@@ -358,94 +371,94 @@ const styles = {
     alignItems: 'center',
     gap: '8px',
     marginBottom: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#4A5568'
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
+    color: colors.textSecondary
   },
   input: {
     width: '100%',
     padding: '10px 12px',
-    border: '1px solid #E2E8F0',
-    borderRadius: '6px',
-    fontSize: '14px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.sm,
+    fontSize: fonts.size.base,
     outline: 'none'
   },
   impactSection: {
     marginBottom: '24px',
     padding: '20px',
-    background: '#F7FAFC',
-    borderRadius: '8px',
-    border: '1px solid #E2E8F0'
+    background: colors.background,
+    borderRadius: radius.md,
+    border: `1px solid ${colors.border}`
   },
   sectionTitle: {
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#1A202C',
+    fontSize: fonts.size.lg,
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary,
     marginBottom: '16px'
   },
   timelineBox: {
-    background: 'white',
+    background: colors.surface,
     padding: '16px',
-    borderRadius: '8px',
-    border: '2px solid #DBEAFE',
+    borderRadius: radius.md,
+    border: `2px solid ${colors.infoBorder}`,
     marginBottom: '16px'
   },
   timelineHeader: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#1E3A8A',
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
+    color: colors.info,
     marginBottom: '16px',
     textAlign: 'center'
   },
   timelinePeriod: {
     padding: '12px',
-    background: '#F0F9FF',
-    borderRadius: '6px',
+    background: colors.infoLight,
+    borderRadius: radius.sm,
     marginBottom: '12px'
   },
   periodLabel: {
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#1E40AF',
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.semibold,
+    color: colors.info,
     marginBottom: '6px'
   },
   periodDetail: {
-    fontSize: '11px',
-    color: '#3B82F6',
+    fontSize: fonts.size.xs,
+    color: colors.info,
     lineHeight: '1.6'
   },
   settlementMarker: {
     padding: '12px',
-    background: '#FEF3C7',
-    border: '2px dashed #F59E0B',
-    borderRadius: '6px',
+    background: colors.warningLight,
+    border: `2px dashed ${colors.warning}`,
+    borderRadius: radius.sm,
     textAlign: 'center',
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#92400E',
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.semibold,
+    color: colors.warningText,
     marginBottom: '12px'
   },
   settlementAmount: {
-    fontSize: '12px',
+    fontSize: fonts.size.sm,
     marginTop: '4px',
-    color: '#78350F'
+    color: colors.warningText
   },
   savingsBox: {
-    background: 'white',
+    background: colors.surface,
     padding: '16px',
-    borderRadius: '8px',
-    border: '1px solid #D1FAE5'
+    borderRadius: radius.md,
+    border: `1px solid ${colors.successBorder}`
   },
   savingsRow: {
     display: 'flex',
     justifyContent: 'space-between',
     padding: '8px 0',
-    fontSize: '13px',
-    color: '#4A5568'
+    fontSize: fonts.size.sm,
+    color: colors.textSecondary
   },
   savingsDivider: {
     height: '1px',
-    background: '#E2E8F0',
+    background: colors.border,
     margin: '12px 0'
   },
   savingsHighlight: {
@@ -453,16 +466,16 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '12px',
-    background: '#ECFDF5',
-    borderRadius: '6px',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#065F46'
+    background: colors.successLight,
+    borderRadius: radius.sm,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
+    color: colors.successText
   },
   savingsValue: {
-    fontSize: '18px',
-    fontWeight: '700',
-    color: '#059669'
+    fontSize: fonts.size.xl,
+    fontWeight: fonts.weight.bold,
+    color: colors.success
   },
   savingsGrid: {
     display: 'grid',
@@ -471,61 +484,61 @@ const styles = {
     marginBottom: '16px'
   },
   savingCard: {
-    background: 'white',
+    background: colors.surface,
     padding: '16px',
-    borderRadius: '8px',
-    border: '1px solid #E2E8F0',
+    borderRadius: radius.md,
+    border: `1px solid ${colors.border}`,
     textAlign: 'center'
   },
   cardLabel: {
-    fontSize: '11px',
-    color: '#718096',
+    fontSize: fonts.size.xs,
+    color: colors.textSecondary,
     marginBottom: '8px',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
-    fontWeight: '600'
+    fontWeight: fonts.weight.semibold
   },
   cardValue: {
-    fontSize: '20px',
-    fontWeight: '700',
-    color: '#059669',
+    fontSize: fonts.size['2xl'],
+    fontWeight: fonts.weight.bold,
+    color: colors.success,
     marginBottom: '4px'
   },
   cardNote: {
-    fontSize: '11px',
-    color: '#A0AEC0'
+    fontSize: fonts.size.xs,
+    color: colors.textMuted
   },
   totalSavingsBox: {
     display: 'flex',
     alignItems: 'center',
     gap: '16px',
     padding: '20px',
-    background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
-    borderRadius: '8px',
-    border: '2px solid #10B981'
+    background: `linear-gradient(135deg, ${colors.successLight} 0%, ${colors.successBorder} 100%)`,
+    borderRadius: radius.md,
+    border: `2px solid ${colors.success}`
   },
   totalLabel: {
-    fontSize: '11px',
-    color: '#065F46',
-    fontWeight: '700',
+    fontSize: fonts.size.xs,
+    color: colors.successText,
+    fontWeight: fonts.weight.bold,
     letterSpacing: '0.5px',
     marginBottom: '4px'
   },
   totalValue: {
-    fontSize: '28px',
-    fontWeight: '700',
-    color: '#059669',
+    fontSize: fonts.size['3xl'],
+    fontWeight: fonts.weight.bold,
+    color: colors.success,
     marginBottom: '4px'
   },
   totalNote: {
-    fontSize: '12px',
-    color: '#047857'
+    fontSize: fonts.size.sm,
+    color: colors.successText
   },
   settlementQuoteBox: {
-    background: '#F0F9FF',
+    background: colors.infoLight,
     padding: '20px',
-    borderRadius: '8px',
-    border: '2px solid #3B82F6',
+    borderRadius: radius.md,
+    border: `2px solid ${colors.info}`,
     marginBottom: '24px'
   },
   quoteHeader: {
@@ -534,35 +547,35 @@ const styles = {
     alignItems: 'center',
     marginBottom: '16px',
     paddingBottom: '12px',
-    borderBottom: '2px solid #93C5FD'
+    borderBottom: `2px solid ${colors.infoBorder}`
   },
   quoteTitle: {
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#1E3A8A'
+    fontSize: fonts.size.lg,
+    fontWeight: fonts.weight.bold,
+    color: colors.info
   },
   quoteDate: {
-    fontSize: '12px',
-    fontWeight: '600',
-    color: '#3B82F6'
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.semibold,
+    color: colors.info
   },
   quoteBreakdown: {
-    background: 'white',
+    background: colors.surface,
     padding: '16px',
-    borderRadius: '6px',
+    borderRadius: radius.sm,
     marginBottom: '12px'
   },
   quoteRow: {
     display: 'flex',
     justifyContent: 'space-between',
     padding: '10px 0',
-    fontSize: '14px',
-    color: '#1E40AF',
-    borderBottom: '1px solid #DBEAFE'
+    fontSize: fonts.size.base,
+    color: colors.info,
+    borderBottom: `1px solid ${colors.infoLight}`
   },
   quoteDivider: {
     height: '2px',
-    background: '#3B82F6',
+    background: colors.info,
     margin: '12px 0'
   },
   quoteTotal: {
@@ -570,20 +583,20 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '12px 0',
-    fontSize: '15px',
-    fontWeight: '700',
-    color: '#1E3A8A'
+    fontSize: fonts.size.md,
+    fontWeight: fonts.weight.bold,
+    color: colors.info
   },
   quoteTotalAmount: {
-    fontSize: '24px',
-    fontWeight: '700',
-    color: '#2563EB'
+    fontSize: fonts.size['3xl'],
+    fontWeight: fonts.weight.bold,
+    color: colors.info
   },
   quoteNote: {
-    fontSize: '12px',
-    color: '#1E40AF',
+    fontSize: fonts.size.sm,
+    color: colors.info,
     padding: '6px 12px',
-    background: '#DBEAFE',
+    background: colors.infoLight,
     borderRadius: '4px',
     marginTop: '8px'
   },
@@ -592,28 +605,28 @@ const styles = {
     justifyContent: 'flex-end',
     gap: '12px',
     paddingTop: '24px',
-    borderTop: '1px solid #E2E8F0'
+    borderTop: `1px solid ${colors.border}`
   },
   cancelButton: {
     padding: '10px 20px',
-    background: '#EDF2F7',
+    background: colors.background,
     border: 'none',
-    borderRadius: '6px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.sm,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
-    color: '#4A5568'
+    color: colors.textSecondary
   },
   confirmButton: {
     padding: '10px 20px',
-    background: '#10B981',
-    color: 'white',
+    background: gradients.success,
+    color: colors.textOnDark,
     border: 'none',
-    borderRadius: '6px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.sm,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer'
   }
-};
+});
 
 export default SettlementImpactModal;

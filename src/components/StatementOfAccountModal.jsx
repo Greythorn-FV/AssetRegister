@@ -1,15 +1,27 @@
 // File: src/components/StatementOfAccountModal.jsx
 // Statement of Account Modal - Accounting Ledger View
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Download, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '../utils/currencyHelpers.js';
 import { useStatementOfAccount } from '../hooks/useStatementOfAccount.js';
+import { useIsMobile } from '../hooks/useIsMobile.js';
+import { colors, gradients, fonts, shadows, radius } from '../styles/theme.js';
 
 const StatementOfAccountModal = ({ contract, isOpen, onClose }) => {
+  const isMobile = useIsMobile();
   const { transactions, summary, exportToCSV } = useStatementOfAccount(contract);
-  
+
+  useEffect(() => {
+    if (isOpen && isMobile) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [isOpen, isMobile]);
+
+  const styles = getStyles(isMobile);
+
   if (!isOpen || !contract) return null;
   
   const getTypeColor = (type) => {
@@ -137,7 +149,7 @@ const StatementOfAccountModal = ({ contract, isOpen, onClose }) => {
   );
 };
 
-const styles = {
+const getStyles = (m) => ({
   overlay: {
     position: 'fixed',
     top: 0,
@@ -147,25 +159,26 @@ const styles = {
     background: 'rgba(0, 0, 0, 0.6)',
     backdropFilter: 'blur(8px)',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: m ? 'stretch' : 'center',
     justifyContent: 'center',
     zIndex: 1100,
     animation: 'fadeIn 0.2s ease-out'
   },
   modal: {
-    background: 'white',
-    borderRadius: '20px',
-    width: '95%',
-    maxWidth: '1400px',
-    height: '90vh',
+    background: colors.surface,
+    borderRadius: m ? 0 : radius.xl,
+    width: m ? '100%' : '95%',
+    maxWidth: m ? 'none' : '1400px',
+    maxHeight: m ? '100vh' : undefined,
+    height: m ? '100vh' : '90vh',
     overflow: 'hidden',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+    boxShadow: m ? 'none' : shadows.xl,
     display: 'flex',
     flexDirection: 'column'
   },
   header: {
-    background: 'linear-gradient(135deg, #4B6D8B 0%, #6B8CAE 100%)',
-    padding: '28px 32px',
+    background: gradients.primary,
+    padding: m ? '16px' : '28px 32px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -183,43 +196,43 @@ const styles = {
     gap: '16px'
   },
   title: {
-    fontSize: '26px',
-    fontWeight: '700',
-    color: 'white',
+    fontSize: m ? fonts.size['2xl'] : fonts.size['3xl'],
+    fontWeight: fonts.weight.bold,
+    color: colors.textOnDark,
     margin: 0
   },
   subtitle: {
-    fontSize: '15px',
+    fontSize: fonts.size.md,
     color: 'rgba(255, 255, 255, 0.9)',
     margin: '4px 0 0 0',
-    fontWeight: '600'
+    fontWeight: fonts.weight.semibold
   },
   exportButton: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
     padding: '12px 20px',
-    background: 'rgba(255, 255, 255, 0.2)',
+    background: 'rgba(255, 255, 255, 0.12)',
     border: '2px solid rgba(255, 255, 255, 0.3)',
-    borderRadius: '12px',
-    color: 'white',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.lg,
+    color: colors.textOnDark,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
     transition: 'all 0.2s',
     backdropFilter: 'blur(10px)'
   },
   closeButton: {
-    background: 'rgba(255, 255, 255, 0.2)',
+    background: 'rgba(255, 255, 255, 0.12)',
     border: 'none',
-    borderRadius: '12px',
+    borderRadius: radius.lg,
     width: '44px',
     height: '44px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     cursor: 'pointer',
-    color: 'white',
+    color: colors.textOnDark,
     transition: 'all 0.2s',
     backdropFilter: 'blur(10px)'
   },
@@ -228,29 +241,29 @@ const styles = {
     gridTemplateColumns: 'repeat(3, 1fr)',
     gap: '20px',
     padding: '24px 32px',
-    background: 'linear-gradient(to bottom, #F8FAFC, white)',
-    borderBottom: '2px solid #E2E8F0',
+    background: `linear-gradient(to bottom, ${colors.background}, ${colors.surface})`,
+    borderBottom: `2px solid ${colors.border}`,
     flexShrink: 0
   },
   summaryCard: {
-    background: 'white',
+    background: colors.surface,
     padding: '20px',
-    borderRadius: '12px',
-    border: '1px solid #E2E8F0',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)'
+    borderRadius: radius.lg,
+    border: `1px solid ${colors.border}`,
+    boxShadow: shadows.sm
   },
   summaryLabel: {
-    fontSize: '12px',
-    color: '#64748B',
-    fontWeight: '600',
+    fontSize: fonts.size.sm,
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.semibold,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     marginBottom: '8px'
   },
   summaryValue: {
-    fontSize: '24px',
-    fontWeight: '700',
-    color: '#1E293B'
+    fontSize: fonts.size['3xl'],
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary
   },
   tableContainer: {
     flex: 1,
@@ -265,49 +278,49 @@ const styles = {
   thead: {
     position: 'sticky',
     top: 0,
-    background: '#F1F5F9',
+    background: colors.borderLight,
     zIndex: 10
   },
   th: {
     padding: '14px 16px',
     textAlign: 'center',
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#475569',
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.bold,
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
-    borderBottom: '2px solid #CBD5E1'
+    borderBottom: `2px solid ${colors.borderDark}`
   },
   tr: {
     transition: 'background 0.15s'
   },
   td: {
     padding: '14px 16px',
-    fontSize: '14px',
-    color: '#334155',
-    borderBottom: '1px solid #E2E8F0',
+    fontSize: fonts.size.base,
+    color: colors.textPrimary,
+    borderBottom: `1px solid ${colors.border}`,
     textAlign: 'center'
   },
   typeBadge: {
     display: 'inline-block',
     padding: '4px 12px',
-    borderRadius: '8px',
-    fontSize: '11px',
-    fontWeight: '700',
+    borderRadius: radius.md,
+    fontSize: fonts.size.xs,
+    fontWeight: fonts.weight.bold,
     textTransform: 'uppercase',
     letterSpacing: '0.5px'
   },
   footer: {
     padding: '20px 32px',
-    background: '#F8FAFC',
-    borderTop: '2px solid #E2E8F0',
+    background: colors.background,
+    borderTop: `2px solid ${colors.border}`,
     flexShrink: 0
   },
   footerNote: {
-    fontSize: '13px',
-    color: '#64748B',
+    fontSize: fonts.size.sm,
+    color: colors.textSecondary,
     lineHeight: '1.6'
   }
-};
+});
 
 export default StatementOfAccountModal;

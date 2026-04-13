@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { Percent, TrendingUp, TrendingDown } from 'lucide-react';
+import { colors, gradients, fonts, shadows, radius } from '../../styles/theme.js';
 
 const InterestRateSection = ({ contract, loading, onUpdateRate }) => {
   const effectiveRate = (contract.baseRate || 0) + (contract.margin || 0);
@@ -42,9 +43,9 @@ const InterestRateSection = ({ contract, loading, onUpdateRate }) => {
                   <div key={index} style={styles.timelineItem}>
                     <div style={styles.timelineIcon}>
                       {isIncrease ? (
-                        <TrendingUp size={12} color="#DC2626" />
+                        <TrendingUp size={12} color={colors.error} />
                       ) : (
-                        <TrendingDown size={12} color="#059669" />
+                        <TrendingDown size={12} color={colors.success} />
                       )}
                     </div>
                     <div style={styles.timelineContent}>
@@ -59,7 +60,7 @@ const InterestRateSection = ({ contract, loading, onUpdateRate }) => {
                         {change.oldEffectiveRate.toFixed(2)}% → {change.newEffectiveRate.toFixed(2)}%
                         <span style={{
                           ...styles.changeIndicator,
-                          color: isIncrease ? '#DC2626' : '#059669'
+                          color: isIncrease ? colors.error : colors.success
                         }}>
                           ({isIncrease ? '+' : ''}{diff.toFixed(2)}%)
                         </span>
@@ -86,9 +87,9 @@ const styles = {
     marginBottom: '20px'
   },
   compactCard: {
-    background: 'linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%)',
-    borderRadius: '12px',
-    border: '1px solid #E5E7EB',
+    background: `linear-gradient(135deg, ${colors.surfaceHover} 0%, ${colors.background} 100%)`,
+    borderRadius: radius.lg,
+    border: `1px solid ${colors.border}`,
     overflow: 'hidden'
   },
   cardHeader: {
@@ -96,8 +97,8 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '14px 18px',
-    background: 'white',
-    borderBottom: '1px solid #E5E7EB'
+    background: colors.surface,
+    borderBottom: `1px solid ${colors.border}`
   },
   headerContent: {
     display: 'flex',
@@ -108,53 +109,53 @@ const styles = {
   iconBadge: {
     width: '28px',
     height: '28px',
-    borderRadius: '8px',
-    background: 'linear-gradient(135deg, #FEF3C7, #FDE68A)',
+    borderRadius: radius.md,
+    background: gradients.gold,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: '#92400E',
+    color: colors.warningText,
     flexShrink: 0
   },
   titleArea: {
     flex: 1
   },
   cardTitle: {
-    fontSize: '13px',
-    fontWeight: '700',
-    color: '#1F2937',
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary,
     margin: 0,
     marginBottom: '2px'
   },
   cardSubtitle: {
-    fontSize: '11px',
-    color: '#6B7280',
+    fontSize: fonts.size.xs,
+    color: colors.textSecondary,
     margin: 0,
-    fontWeight: '500'
+    fontWeight: fonts.weight.medium
   },
   updateButton: {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
     padding: '8px 14px',
-    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
-    color: 'white',
+    background: gradients.primary,
+    color: colors.textOnDark,
     border: 'none',
-    borderRadius: '8px',
-    fontSize: '12px',
-    fontWeight: '600',
+    borderRadius: radius.md,
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    boxShadow: '0 2px 4px rgba(75, 109, 139, 0.2)'
+    boxShadow: shadows.md
   },
   historySection: {
     padding: '12px 18px',
-    background: '#FAFAFA'
+    background: colors.surfaceHover
   },
   historyTitle: {
-    fontSize: '11px',
-    fontWeight: '700',
-    color: '#6B7280',
+    fontSize: fonts.size.xs,
+    fontWeight: fonts.weight.bold,
+    color: colors.textSecondary,
     marginBottom: '10px',
     textTransform: 'uppercase',
     letterSpacing: '0.05em'
@@ -169,15 +170,15 @@ const styles = {
     alignItems: 'center',
     gap: '10px',
     padding: '8px',
-    background: 'white',
-    borderRadius: '8px',
-    border: '1px solid #E5E7EB'
+    background: colors.surface,
+    borderRadius: radius.md,
+    border: `1px solid ${colors.border}`
   },
   timelineIcon: {
     width: '24px',
     height: '24px',
-    borderRadius: '6px',
-    background: '#F9FAFB',
+    borderRadius: radius.sm,
+    background: colors.background,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -191,32 +192,32 @@ const styles = {
     gap: '8px'
   },
   timelineDate: {
-    fontSize: '11px',
-    color: '#6B7280',
-    fontWeight: '600'
+    fontSize: fonts.size.xs,
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.semibold
   },
   timelineChange: {
-    fontSize: '11px',
-    color: '#1F2937',
-    fontWeight: '600',
+    fontSize: fonts.size.xs,
+    color: colors.textPrimary,
+    fontWeight: fonts.weight.semibold,
     display: 'flex',
     alignItems: 'center',
     gap: '6px'
   },
   changeIndicator: {
     fontSize: '10px',
-    fontWeight: '700'
+    fontWeight: fonts.weight.bold
   },
   moreHistory: {
     marginTop: '8px',
     padding: '6px 12px',
-    background: 'white',
-    borderRadius: '6px',
+    background: colors.surface,
+    borderRadius: radius.sm,
     textAlign: 'center',
-    fontSize: '11px',
-    color: '#6B7280',
-    fontWeight: '600',
-    border: '1px solid #E5E7EB'
+    fontSize: fonts.size.xs,
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.semibold,
+    border: `1px solid ${colors.border}`
   }
 };
 

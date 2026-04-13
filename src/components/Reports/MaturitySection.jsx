@@ -5,8 +5,196 @@ import React from 'react';
 import { Clock, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/currencyHelpers.js';
+import { colors, gradients, fonts, shadows, radius } from '../../styles/theme.js';
+import { useIsMobile } from '../../hooks/useIsMobile.js';
+
+const getStyles = (m) => ({
+  section: {
+    marginBottom: m ? '24px' : '40px',
+    maxWidth: '100vw',
+    overflowX: 'hidden',
+    boxSizing: 'border-box'
+  },
+  sectionHeader: {
+    marginBottom: m ? '16px' : '24px'
+  },
+  sectionTitleArea: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: m ? '10px' : '16px'
+  },
+  sectionIcon: {
+    width: m ? '36px' : '48px',
+    height: m ? '36px' : '48px',
+    borderRadius: radius.lg,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: colors.textOnDark,
+    flexShrink: 0
+  },
+  sectionTitle: {
+    margin: '0 0 4px 0',
+    fontSize: m ? fonts.size.lg : fonts.size['2xl'],
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary
+  },
+  sectionSubtitle: {
+    margin: 0,
+    fontSize: m ? fonts.size.sm : fonts.size.base,
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.semibold
+  },
+  emptyState: {
+    textAlign: 'center',
+    padding: m ? '32px 16px' : '60px 20px',
+    background: colors.surface,
+    borderRadius: radius.lg,
+    border: `2px dashed ${colors.border}`
+  },
+  emptyIcon: {
+    fontSize: m ? '36px' : '48px',
+    marginBottom: '12px'
+  },
+  emptyTitle: {
+    fontSize: m ? fonts.size.base : fonts.size.xl,
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary,
+    marginBottom: '6px'
+  },
+  emptyText: {
+    fontSize: m ? fonts.size.sm : fonts.size.base,
+    color: colors.textSecondary
+  },
+  contractsGrid: {
+    display: 'grid',
+    gridTemplateColumns: m ? '1fr' : 'repeat(auto-fill, minmax(380px, 1fr))',
+    gap: m ? '12px' : '20px'
+  },
+  maturityCard: {
+    padding: m ? '14px' : '24px',
+    borderRadius: radius.lg,
+    border: '2px solid rgba(255, 255, 255, 0.3)',
+    boxShadow: shadows.md,
+    transition: 'all 0.3s'
+  },
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: m ? '12px' : '20px',
+    paddingBottom: m ? '10px' : '16px',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.4)',
+    gap: '8px'
+  },
+  contractNumber: {
+    fontSize: m ? '16px' : '20px',
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary,
+    marginBottom: m ? '4px' : '6px',
+    wordBreak: 'break-word'
+  },
+  conclusionDate: {
+    fontSize: m ? '11px' : '13px',
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.semibold
+  },
+  daysCounter: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: m ? '4px' : '6px',
+    padding: m ? '6px 10px' : '8px 14px',
+    background: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: radius.md,
+    fontSize: m ? fonts.size.sm : fonts.size.base,
+    fontWeight: fonts.weight.bold,
+    color: colors.error,
+    boxShadow: shadows.sm,
+    flexShrink: 0,
+    whiteSpace: 'nowrap'
+  },
+  cardMetrics: {
+    display: 'grid',
+    gridTemplateColumns: m ? '1fr 1fr' : 'repeat(3, 1fr)',
+    gap: m ? '8px' : '16px',
+    marginBottom: m ? '12px' : '16px'
+  },
+  cardMetric: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px'
+  },
+  metricLabel: {
+    fontSize: m ? '9px' : fonts.size.xs,
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.bold,
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  metricValue: {
+    fontSize: m ? fonts.size.base : fonts.size.lg,
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary,
+    wordBreak: 'break-word'
+  },
+  variableBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: m ? '4px 10px' : '6px 12px',
+    background: `linear-gradient(135deg, ${colors.warningLight}, #FDE68A)`,
+    borderRadius: radius.md,
+    fontSize: m ? '11px' : fonts.size.sm,
+    fontWeight: fonts.weight.bold,
+    color: colors.warningText,
+    border: `1px solid ${colors.warningBorder}`,
+    marginBottom: m ? '12px' : '16px'
+  },
+  vehiclesList: {
+    background: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: radius.lg,
+    padding: m ? '8px' : '12px',
+    marginTop: m ? '8px' : '12px'
+  },
+  vehiclesTitle: {
+    fontSize: m ? '11px' : fonts.size.sm,
+    fontWeight: fonts.weight.bold,
+    color: colors.textSecondary,
+    marginBottom: m ? '6px' : '8px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  vehicleItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: m ? '4px 0' : '6px 0',
+    fontSize: m ? '11px' : '13px',
+    gap: '8px'
+  },
+  vehicleReg: {
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary
+  },
+  vehicleMake: {
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.semibold,
+    textAlign: 'right'
+  },
+  vehicleMore: {
+    fontSize: m ? '11px' : fonts.size.sm,
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.semibold,
+    fontStyle: 'italic',
+    paddingTop: '6px',
+    borderTop: '1px solid rgba(100, 116, 139, 0.2)'
+  }
+});
 
 const MaturitySection = ({ title, contracts, icon, iconColor, bgGradient, getTotalCapital, getTotalVehicles }) => {
+  const isMobile = useIsMobile();
+  const styles = getStyles(isMobile);
+
   const totalCapital = getTotalCapital(contracts);
   const totalVehicles = getTotalVehicles(contracts);
 
@@ -24,8 +212,8 @@ const MaturitySection = ({ title, contracts, icon, iconColor, bgGradient, getTot
           <div>
             <h2 style={styles.sectionTitle}>{title}</h2>
             <p style={styles.sectionSubtitle}>
-              {contracts.length} {contracts.length === 1 ? 'contract' : 'contracts'} • 
-              {totalVehicles} {totalVehicles === 1 ? 'vehicle' : 'vehicles'} • 
+              {contracts.length} {contracts.length === 1 ? 'contract' : 'contracts'} •
+              {totalVehicles} {totalVehicles === 1 ? 'vehicle' : 'vehicles'} •
               {formatCurrency(totalCapital)} outstanding
             </p>
           </div>
@@ -41,8 +229,8 @@ const MaturitySection = ({ title, contracts, icon, iconColor, bgGradient, getTot
       ) : (
         <div style={styles.contractsGrid}>
           {contracts.map((contract, index) => (
-            <div 
-              key={contract.id || index} 
+            <div
+              key={contract.id || index}
               style={{
                 ...styles.maturityCard,
                 background: bgGradient
@@ -56,7 +244,7 @@ const MaturitySection = ({ title, contracts, icon, iconColor, bgGradient, getTot
                   </div>
                 </div>
                 <div style={styles.daysCounter}>
-                  <Clock size={16} />
+                  <Clock size={isMobile ? 14 : 16} />
                   {contract.daysUntilConclusion} days
                 </div>
               </div>
@@ -111,179 +299,6 @@ const MaturitySection = ({ title, contracts, icon, iconColor, bgGradient, getTot
       )}
     </div>
   );
-};
-
-const styles = {
-  section: {
-    marginBottom: '40px'
-  },
-  sectionHeader: {
-    marginBottom: '24px'
-  },
-  sectionTitleArea: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px'
-  },
-  sectionIcon: {
-    width: '48px',
-    height: '48px',
-    borderRadius: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: 'white',
-    flexShrink: 0
-  },
-  sectionTitle: {
-    margin: '0 0 4px 0',
-    fontSize: '24px',
-    fontWeight: '700',
-    color: '#0F172A'
-  },
-  sectionSubtitle: {
-    margin: 0,
-    fontSize: '14px',
-    color: '#64748B',
-    fontWeight: '600'
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: '60px 20px',
-    background: 'white',
-    borderRadius: '16px',
-    border: '2px dashed #E2E8F0'
-  },
-  emptyIcon: {
-    fontSize: '48px',
-    marginBottom: '12px'
-  },
-  emptyTitle: {
-    fontSize: '18px',
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: '6px'
-  },
-  emptyText: {
-    fontSize: '14px',
-    color: '#64748B'
-  },
-  contractsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
-    gap: '20px'
-  },
-  maturityCard: {
-    padding: '24px',
-    borderRadius: '16px',
-    border: '2px solid rgba(255, 255, 255, 0.3)',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-    transition: 'all 0.3s'
-  },
-  cardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '20px',
-    paddingBottom: '16px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.4)'
-  },
-  contractNumber: {
-    fontSize: '20px',
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: '6px'
-  },
-  conclusionDate: {
-    fontSize: '13px',
-    color: '#475569',
-    fontWeight: '600'
-  },
-  daysCounter: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '8px 14px',
-    background: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: '10px',
-    fontSize: '14px',
-    fontWeight: '700',
-    color: '#DC2626',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-  },
-  cardMetrics: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '16px',
-    marginBottom: '16px'
-  },
-  cardMetric: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px'
-  },
-  metricLabel: {
-    fontSize: '11px',
-    color: '#475569',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px'
-  },
-  metricValue: {
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#0F172A'
-  },
-  variableBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '6px 12px',
-    background: 'linear-gradient(135deg, #FEF3C7, #FDE68A)',
-    borderRadius: '8px',
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#92400E',
-    border: '1px solid #FCD34D',
-    marginBottom: '16px'
-  },
-  vehiclesList: {
-    background: 'rgba(255, 255, 255, 0.6)',
-    borderRadius: '12px',
-    padding: '12px',
-    marginTop: '12px'
-  },
-  vehiclesTitle: {
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#475569',
-    marginBottom: '8px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px'
-  },
-  vehicleItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '6px 0',
-    fontSize: '13px'
-  },
-  vehicleReg: {
-    fontWeight: '700',
-    color: '#0F172A'
-  },
-  vehicleMake: {
-    color: '#64748B',
-    fontWeight: '600'
-  },
-  vehicleMore: {
-    fontSize: '12px',
-    color: '#64748B',
-    fontWeight: '600',
-    fontStyle: 'italic',
-    paddingTop: '6px',
-    borderTop: '1px solid rgba(100, 116, 139, 0.2)'
-  }
 };
 
 export default MaturitySection;

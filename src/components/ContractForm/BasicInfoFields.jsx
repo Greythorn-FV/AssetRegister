@@ -2,6 +2,7 @@
 // Basic contract information fields - NO PLACEHOLDERS
 
 import React from 'react';
+import { colors, fonts, radius } from '../../styles/theme.js';
 
 const BasicInfoFields = ({ formData, onInputChange }) => {
   return (
@@ -74,37 +75,37 @@ const BasicInfoFields = ({ formData, onInputChange }) => {
 
 const styles = {
   formGroup: {
-    marginBottom: '20px'
+    marginBottom: '12px'
   },
   label: {
     display: 'block',
-    marginBottom: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#1e293b',
+    marginBottom: '4px',
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.semibold,
+    color: colors.textPrimary,
     letterSpacing: '-0.01em'
   },
   input: {
     width: '100%',
-    padding: '12px 14px',
-    border: '2px solid #e2e8f0',
-    borderRadius: '10px',
-    fontSize: '14px',
+    padding: '10px 12px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.md,
+    fontSize: fonts.size.sm,
     outline: 'none',
     transition: 'all 0.2s ease',
     fontFamily: 'inherit',
-    background: '#ffffff'
+    background: colors.surface
   },
   select: {
     width: '100%',
-    padding: '12px 14px',
-    border: '2px solid #e2e8f0',
-    borderRadius: '10px',
-    fontSize: '14px',
+    padding: '10px 12px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.md,
+    fontSize: fonts.size.sm,
     outline: 'none',
     transition: 'all 0.2s ease',
     fontFamily: 'inherit',
-    background: '#ffffff',
+    background: colors.surface,
     cursor: 'pointer'
   },
   inputWrapper: {
@@ -115,15 +116,15 @@ const styles = {
     left: '14px',
     top: '50%',
     transform: 'translateY(-50%)',
-    fontSize: '14px',
-    color: '#64748b',
-    fontWeight: '600',
+    fontSize: fonts.size.base,
+    color: colors.textSecondary,
+    fontWeight: fonts.weight.semibold,
     pointerEvents: 'none'
   },
   row: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: '16px'
+    gap: '10px'
   }
 };
 

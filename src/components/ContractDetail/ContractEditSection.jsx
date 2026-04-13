@@ -2,6 +2,7 @@
 // Edit mode for contract details
 
 import React from 'react';
+import { colors, gradients, fonts, shadows, radius } from '../../styles/theme.js';
 
 const ContractEditSection = ({ 
   editData, 
@@ -136,23 +137,23 @@ const styles = {
   label: {
     display: 'block',
     marginBottom: '6px',
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#4A5568'
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.semibold,
+    color: colors.textSecondary
   },
   labelSmall: {
     display: 'block',
     marginBottom: '4px',
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#4A5568'
+    fontSize: fonts.size.xs,
+    fontWeight: fonts.weight.semibold,
+    color: colors.textSecondary
   },
   input: {
     width: '100%',
     padding: '8px 10px',
-    border: '1px solid #E2E8F0',
-    borderRadius: '6px',
-    fontSize: '13px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: radius.sm,
+    fontSize: fonts.size.sm,
     outline: 'none'
   },
   row: {
@@ -161,16 +162,16 @@ const styles = {
     gap: '16px'
   },
   sectionTitle: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#1A202C',
+    fontSize: fonts.size.lg,
+    fontWeight: fonts.weight.semibold,
+    color: colors.textPrimary,
     marginBottom: '16px'
   },
   editVehicleCard: {
     padding: '16px',
-    background: '#F7FAFC',
-    borderRadius: '8px',
-    border: '1px solid #E2E8F0',
+    background: colors.surfaceHover,
+    borderRadius: radius.md,
+    border: `1px solid ${colors.border}`,
     marginBottom: '12px'
   },
   vehicleEditHeader: {
@@ -180,24 +181,24 @@ const styles = {
     marginBottom: '12px'
   },
   vehicleNumber: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#1A202C'
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
+    color: colors.textPrimary
   },
   vehicleBadge: {
     padding: '4px 10px',
-    borderRadius: '10px',
-    fontSize: '11px',
-    fontWeight: '600',
+    borderRadius: radius.md,
+    fontSize: fonts.size.xs,
+    fontWeight: fonts.weight.semibold,
     textTransform: 'capitalize'
   },
   vehicleBadgeActive: {
-    background: '#C6F6D5',
-    color: '#22543D'
+    background: colors.successLight,
+    color: colors.successText
   },
   vehicleBadgeSettled: {
-    background: '#E2E8F0',
-    color: '#4A5568'
+    background: colors.settledBg,
+    color: colors.settled
   },
   vehicleEditFields: {
     display: 'grid',
@@ -209,26 +210,26 @@ const styles = {
     justifyContent: 'flex-end',
     gap: '12px',
     paddingTop: '24px',
-    borderTop: '1px solid #E2E8F0'
+    borderTop: `1px solid ${colors.border}`
   },
   cancelButton: {
     padding: '10px 20px',
-    background: '#EDF2F7',
+    background: colors.background,
     border: 'none',
-    borderRadius: '6px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.sm,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
-    color: '#4A5568'
+    color: colors.textSecondary
   },
   saveButton: {
     padding: '10px 20px',
-    background: '#48BB78',
-    color: 'white',
+    background: colors.success,
+    color: colors.textOnDark,
     border: 'none',
-    borderRadius: '6px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.sm,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer'
   }
 };

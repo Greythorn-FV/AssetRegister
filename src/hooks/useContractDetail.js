@@ -2,7 +2,7 @@
 // Custom hook for Contract Detail Modal business logic - WITH STATEMENT MODAL
 
 import { useState } from 'react';
-import { settleVehicle, updateContract, deleteContract } from '../services/firestoreService.js';
+import { settleVehicle, unsettleVehicle, updateVehicleNote, updateContract, deleteContract } from '../services/firestoreService.js';
 import { calculateContractMetrics } from '../services/calculationService.js';
 
 export const useContractDetail = (contract, onUpdate, onClose) => {
@@ -156,9 +156,38 @@ export const useContractDetail = (contract, onUpdate, onClose) => {
     }
   };
 
+  // Undo vehicle settlement
+  const handleUnsettleVehicle = async (registration) => {
+    if (!window.confirm(`Undo settlement for vehicle ${registration}?`)) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await unsettleVehicle(contract.id, registration);
+      onUpdate();
+    } catch (err) {
+      setError(err.message || 'Failed to undo settlement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update vehicle note
+  const handleUpdateVehicleNote = async (registration, note) => {
+    try {
+      await updateVehicleNote(contract.id, registration, note);
+      onUpdate();
+    } catch (err) {
+      setError(err.message || 'Failed to update note');
+    }
+  };
+
   // Delete entire contract
   const handleDeleteContract = async () => {
-    if (!window.confirm(`Are you sure you want to DELETE contract ${contract.contractNumber}? This cannot be undone!`)) {
+    if (!window.confirm(`Delete contract ${contract.contractNumber}? It will be moved to Trash and can be restored later.`)) {
       return;
     }
 
@@ -224,6 +253,8 @@ export const useContractDetail = (contract, onUpdate, onClose) => {
     handleSettleVehicleClick,
     handleConfirmSettlement,
     handleQuickSettleVehicle,
+    handleUnsettleVehicle,
+    handleUpdateVehicleNote,
     handleDeleteContract,
     openRateChangeModal,
     closeRateChangeModal,

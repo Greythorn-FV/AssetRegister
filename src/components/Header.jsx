@@ -1,52 +1,97 @@
 //src/components/Header.jsx//
 import React from 'react';
+import { ArrowLeft } from 'lucide-react';
+import { useIsMobile } from '../hooks/useIsMobile.js';
+import { colors, gradients, fonts, shadows, radius } from '../styles/theme.js';
 
-const Header = ({ title, children }) => {
+const Header = ({ title, children, mobileActions, onBack }) => {
+  const isMobile = useIsMobile();
+  const s = getStyles(isMobile);
+
   return (
-    <div style={styles.header}>
-      <img 
-        src="/logo.png" 
-        alt="Greythorn Logo" 
-        style={styles.logo}
-      />
-      <h1 style={styles.title}>{title}</h1>
-      <div style={styles.actions}>
-        {children}
+    <div style={s.header}>
+      <div style={s.brandRow}>
+        {isMobile && onBack && (
+          <button onClick={onBack} style={s.backBtn}>
+            <ArrowLeft size={18} />
+          </button>
+        )}
+        <img
+          src="/logo.png"
+          alt="Greythorn Logo"
+          style={s.logo}
+        />
+        {title && <h1 style={s.title}>{title}</h1>}
+        {isMobile && mobileActions && (
+          <div style={s.mobileActionsSlot}>{mobileActions}</div>
+        )}
       </div>
+      {!isMobile && (
+        <div style={s.actions}>
+          {children}
+        </div>
+      )}
     </div>
   );
 };
 
-const styles = {
+const getStyles = (m) => ({
   header: {
     display: 'flex',
+    flexDirection: m ? 'column' : 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '36px',
-    gap: '20px',
+    alignItems: m ? 'stretch' : 'center',
+    marginBottom: m ? '12px' : '32px',
+    gap: m ? '8px' : '20px',
     flexWrap: 'wrap'
   },
+  brandRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: m ? '8px' : '14px',
+    justifyContent: m ? 'flex-start' : 'flex-start',
+  },
+  backBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '36px',
+    height: '36px',
+    borderRadius: radius.md,
+    background: colors.background,
+    border: `1px solid ${colors.border}`,
+    cursor: 'pointer',
+    color: colors.primary,
+    flexShrink: 0,
+    WebkitTapHighlightColor: 'transparent'
+  },
   logo: {
-    height: '60px',
+    height: m ? '28px' : '52px',
     width: 'auto',
     flexShrink: 0
   },
   title: {
-    fontSize: '42px',
-    fontWeight: '800',
-    background: 'linear-gradient(135deg, #4B6D8B, #6B8CAE)',
+    fontSize: m ? '16px' : fonts.size['4xl'],
+    fontWeight: fonts.weight.extrabold,
+    background: gradients.primary,
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
-    letterSpacing: '-1px',
+    letterSpacing: '-0.5px',
     flex: '1 1 auto',
-    textAlign: 'center',
-    minWidth: '300px'
+    textAlign: m ? 'left' : 'center',
+    minWidth: m ? 'unset' : '300px'
+  },
+  mobileActionsSlot: {
+    flexShrink: 0,
+    marginLeft: 'auto'
   },
   actions: {
     display: 'flex',
-    gap: '14px',
-    flexShrink: 0
+    gap: '10px',
+    flexShrink: 0,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end'
   }
-};
+});
 
 export default Header;

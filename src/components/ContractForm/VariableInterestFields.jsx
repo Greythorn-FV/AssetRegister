@@ -2,6 +2,7 @@
 // Variable interest input fields - NO PLACEHOLDERS
 
 import React from 'react';
+import { colors, fonts, radius } from '../../styles/theme.js';
 
 const VariableInterestFields = ({ formData, onInputChange, effectiveRate }) => {
   return (
@@ -54,13 +55,13 @@ const styles = {
     alignItems: 'center',
     gap: '12px',
     padding: '14px 16px',
-    background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-    border: '2px solid #93c5fd',
-    borderRadius: '12px',
+    background: colors.infoLight,
+    border: `2px solid ${colors.infoBorder}`,
+    borderRadius: radius.lg,
     marginBottom: '20px',
-    fontSize: '13px',
-    color: '#1e3a8a',
-    fontWeight: '500'
+    fontSize: fonts.size.sm,
+    color: colors.info,
+    fontWeight: fonts.weight.medium
   },
   infoIcon: {
     fontSize: '18px'
@@ -76,37 +77,37 @@ const styles = {
   label: {
     display: 'block',
     marginBottom: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#1e293b',
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
+    color: colors.textPrimary,
     letterSpacing: '-0.01em'
   },
   input: {
     width: '100%',
     padding: '12px 14px',
-    border: '2px solid #e2e8f0',
-    borderRadius: '10px',
-    fontSize: '14px',
+    border: `2px solid ${colors.border}`,
+    borderRadius: radius.md,
+    fontSize: fonts.size.base,
     outline: 'none',
     transition: 'all 0.2s ease',
     fontFamily: 'inherit',
-    background: '#ffffff'
+    background: colors.surface
   },
   helpText: {
-    fontSize: '12px',
-    color: '#64748b',
+    fontSize: fonts.size.sm,
+    color: colors.textSecondary,
     marginTop: '6px',
     fontStyle: 'italic'
   },
   calculatedRate: {
     padding: '14px 16px',
-    background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
-    border: '2px solid #6ee7b7',
-    borderRadius: '12px',
+    background: colors.successLight,
+    border: `2px solid ${colors.successBorder}`,
+    borderRadius: radius.lg,
     marginBottom: '20px',
-    fontSize: '14px',
-    color: '#065f46',
-    fontWeight: '600'
+    fontSize: fonts.size.base,
+    color: colors.successText,
+    fontWeight: fonts.weight.semibold
   }
 };
 

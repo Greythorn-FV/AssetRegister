@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { Edit2, Trash2, FileText } from 'lucide-react';
+import { colors, gradients, fonts, shadows, radius } from '../../styles/theme.js';
 import { formatCurrency } from '../../utils/currencyHelpers.js';
 import { formatDate } from '../../utils/dateHelpers.js';
 import InterestRateSection from './InterestRateSection.jsx';
@@ -15,6 +16,8 @@ const ContractViewSection = ({
   onEditClick,
   onDeleteContract,
   onSettleVehicle,
+  onUnsettleVehicle,
+  onUpdateVehicleNote,
   onSettleVehicleWithImpact,
   onUpdateRate,
   onViewStatement
@@ -67,7 +70,7 @@ const ContractViewSection = ({
             <div style={styles.infoLabel}>Monthly Capital Instalment</div>
             <div style={styles.infoValue}>{formatCurrency(metrics.monthlyCapitalInstalment)}</div>
             {contract.activeVehiclesCount < contract.originalVehicleCount && (
-              <div style={{fontSize: '11px', color: '#64748b', marginTop: '4px'}}>
+              <div style={{fontSize: fonts.size.xs, color: colors.textSecondary, marginTop: '4px'}}>
                 Current: {formatCurrency(metrics.currentMonthlyCapital)} ({contract.activeVehiclesCount} active)
               </div>
             )}
@@ -146,6 +149,8 @@ const ContractViewSection = ({
         metrics={metrics}
         loading={loading}
         onSettleVehicle={onSettleVehicle}
+        onUnsettleVehicle={onUnsettleVehicle}
+        onUpdateVehicleNote={onUpdateVehicleNote}
         onSettleVehicleWithImpact={onSettleVehicleWithImpact}
       />
 
@@ -173,18 +178,18 @@ const styles = {
   },
   badge: {
     padding: '6px 16px',
-    borderRadius: '12px',
-    fontSize: '13px',
-    fontWeight: '600',
+    borderRadius: radius.lg,
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.semibold,
     textTransform: 'capitalize'
   },
   badgeActive: {
-    background: '#C6F6D5',
-    color: '#22543D'
+    background: colors.successLight,
+    color: colors.successText
   },
   badgeSettled: {
-    background: '#E2E8F0',
-    color: '#4A5568'
+    background: colors.settledBg,
+    color: colors.settled
   },
   grid: {
     display: 'grid',
@@ -192,53 +197,53 @@ const styles = {
     gap: '20px'
   },
   infoItem: {
-    background: 'white',
+    background: colors.surface,
     padding: '16px',
-    borderRadius: '12px',
-    border: '1px solid #E2E8F0'
+    borderRadius: radius.lg,
+    border: `1px solid ${colors.border}`
   },
   infoLabel: {
-    fontSize: '12px',
-    color: '#718096',
+    fontSize: fonts.size.sm,
+    color: colors.textSecondary,
     marginBottom: '8px',
-    fontWeight: '600',
+    fontWeight: fonts.weight.semibold,
     textTransform: 'uppercase',
     letterSpacing: '0.5px'
   },
   estimatedBadge: {
     fontSize: '10px',
     marginLeft: '6px',
-    color: '#3B82F6',
-    fontWeight: '500',
+    color: colors.info,
+    fontWeight: fonts.weight.medium,
     fontStyle: 'italic'
   },
   infoValue: {
-    fontSize: '18px',
-    fontWeight: '700',
-    color: '#1A202C'
+    fontSize: fonts.size.xl,
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary
   },
   infoValueSecondary: {
-    fontSize: '18px',
-    fontWeight: '700',
-    color: '#3182CE'
+    fontSize: fonts.size.xl,
+    fontWeight: fonts.weight.bold,
+    color: colors.info
   },
   infoValueHighlight: {
     fontSize: '20px',
-    fontWeight: '700',
-    color: '#10B981'
+    fontWeight: fonts.weight.bold,
+    color: colors.success
   },
   progressBar: {
     position: 'relative',
     width: '100%',
     height: '32px',
-    background: '#F1F5F9',
-    borderRadius: '8px',
+    background: colors.background,
+    borderRadius: radius.md,
     overflow: 'hidden'
   },
   progressFill: {
     height: '100%',
-    background: 'linear-gradient(90deg, #10B981, #34D399)',
-    borderRadius: '8px',
+    background: gradients.success,
+    borderRadius: radius.md,
     transition: 'width 0.5s ease'
   },
   progressText: {
@@ -246,9 +251,9 @@ const styles = {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    fontSize: '13px',
-    fontWeight: '700',
-    color: '#1A202C'
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.bold,
+    color: colors.textPrimary
   },
   statementSection: {
     marginBottom: '24px'
@@ -259,13 +264,13 @@ const styles = {
     gap: '16px',
     width: '100%',
     padding: '20px 24px',
-    background: 'linear-gradient(135deg, #4B6D8B 0%, #6B8CAE 100%)',
+    background: gradients.primary,
     border: 'none',
-    borderRadius: '14px',
+    borderRadius: radius.xl,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    boxShadow: '0 4px 12px rgba(75, 109, 139, 0.3)',
-    color: 'white'
+    boxShadow: shadows.lg,
+    color: colors.textOnDark
   },
   statementButtonText: {
     display: 'flex',
@@ -274,14 +279,14 @@ const styles = {
     gap: '4px'
   },
   statementButtonTitle: {
-    fontSize: '16px',
-    fontWeight: '700',
+    fontSize: fonts.size.lg,
+    fontWeight: fonts.weight.bold,
     letterSpacing: '-0.01em'
   },
   statementButtonSubtitle: {
-    fontSize: '13px',
-    fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.85)'
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.medium,
+    color: colors.textOnDarkMuted
   },
   footer: {
     display: 'flex',
@@ -289,19 +294,19 @@ const styles = {
     gap: '16px',
     marginTop: '32px',
     paddingTop: '24px',
-    borderTop: '2px solid #F1F5F9'
+    borderTop: `2px solid ${colors.borderLight}`
   },
   deleteButton: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
     padding: '14px 24px',
-    background: 'linear-gradient(135deg, #FEE2E2, #FECACA)',
-    color: '#DC2626',
+    background: `linear-gradient(135deg, ${colors.errorLight}, ${colors.errorBorder})`,
+    color: colors.error,
     border: 'none',
-    borderRadius: '12px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.lg,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
     transition: 'all 0.2s ease'
   },
@@ -310,15 +315,15 @@ const styles = {
     alignItems: 'center',
     gap: '10px',
     padding: '14px 24px',
-    background: 'linear-gradient(135deg, #667eea, #764ba2)',
-    color: 'white',
+    background: gradients.primary,
+    color: colors.textOnDark,
     border: 'none',
-    borderRadius: '12px',
-    fontSize: '14px',
-    fontWeight: '600',
+    borderRadius: radius.lg,
+    fontSize: fonts.size.base,
+    fontWeight: fonts.weight.semibold,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+    boxShadow: shadows.lg
   }
 };
 
