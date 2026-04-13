@@ -1,7 +1,7 @@
 // File: src/components/ContractModal.jsx
 // Two-step modal with Greythorn brand colors
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ArrowRight, ArrowLeft, CheckCircle2, FileText, Car } from 'lucide-react';
 import { useContractForm } from '../hooks/useContractForm.js';
 import FinancingStep from './ContractForm/FinancingStep.jsx';
@@ -9,7 +9,12 @@ import VehiclesStep from './ContractForm/VehiclesStep.jsx';
 
 const ContractModal = ({ isOpen, onClose, onSuccess }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  
+
+  // Reset to step 1 whenever the modal opens
+  useEffect(() => {
+    if (isOpen) setCurrentStep(1);
+  }, [isOpen]);
+
   const {
     formData,
     loading,
