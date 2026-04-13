@@ -1,5 +1,6 @@
 // File: src/services/preciseCalculationService.js
 // Day-Precise Interest Calculations - FIXED CAPITAL PAYMENT BUG
+// Updated: Added openingBalance support for historic contract imports
 
 import { parseISO, differenceInDays, addMonths, getDaysInMonth, startOfMonth, endOfMonth } from 'date-fns';
 
@@ -16,7 +17,8 @@ export const generatePrecisePaymentSchedule = (contract) => {
   const dailyRate = (annualRate / 100) / 365;
   const monthlyCapital = contract.totalCapital / contract.totalInstalments;
   
-  let outstandingBalance = contract.totalCapital;
+  // Use openingBalance if available (for imported historic contracts), otherwise use totalCapital
+  let outstandingBalance = contract.openingBalance || contract.totalCapital;
   
   for (let month = 1; month <= contract.totalInstalments; month++) {
     const monthDate = addMonths(startDate, month - 1);
@@ -208,9 +210,11 @@ export const calculatePreciseMonthInterest = (contract, monthDate, monthNumber =
   const actualDaysInPeriod = differenceInDays(interestPeriodEnd, lastPaymentDate) + 1;
   
   // Calculate starting balance for this period
+  // Use openingBalance if available (for imported historic contracts), otherwise use totalCapital
+  const startingBalance = contract.openingBalance || contract.totalCapital;
   const monthlyCapitalTotal = contract.totalCapital / contract.totalInstalments;
   const capitalPaidBefore = monthlyCapitalTotal * monthsSinceStart;
-  let currentBalance = contract.totalCapital - capitalPaidBefore;
+  let currentBalance = startingBalance - capitalPaidBefore;
   
   // Find any settlements that happened DURING THIS INTEREST PERIOD
   const settlementsThisPeriod = (contract.vehicles || []).filter(v => {

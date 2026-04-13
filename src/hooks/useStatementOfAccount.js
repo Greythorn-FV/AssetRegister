@@ -1,5 +1,6 @@
 // File: src/hooks/useStatementOfAccount.js
 // Hook for generating statement of account transactions
+// Updated: Added openingBalance support for historic contract imports
 
 import { useMemo } from 'react';
 import { parseISO, addMonths, format } from 'date-fns';
@@ -11,7 +12,8 @@ export const useStatementOfAccount = (contract) => {
     if (!contract) return [];
     
     const txns = [];
-    let runningBalance = contract.totalCapital;
+    // Use openingBalance if available (for imported historic contracts), otherwise use totalCapital
+    let runningBalance = contract.openingBalance || contract.totalCapital;
     
     // 1. Opening Balance
     txns.push({

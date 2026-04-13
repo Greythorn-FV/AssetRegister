@@ -1,6 +1,6 @@
 // File: src/components/ContractImportModal.jsx
 // Historic Contract Import System - PRODUCTION READY
-// Updated: Added Net Price and Gross Price columns
+// Updated: Added Net Price, Gross Price, and Opening Balance columns
 
 import React, { useState, useEffect } from 'react';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Download } from 'lucide-react';
@@ -110,59 +110,60 @@ const ContractImportModal = ({ isOpen, onClose, onImportComplete }) => {
   };
 
   // Validate contract-level data
-const validateContractRow = (row, rowNum, isNewContract) => {
-  const errors = [];
-  
-  const rawDate = row['first instalment date'] || '';
-  const isoDate = convertUKDateToISO(rawDate);
-  
-  // 🔥 DEBUG: Log what we're reading
-  console.log(`Row ${rowNum} - Contract: ${row['contract number']}, Raw Total Capital: "${row['total capital']}", Parsed: ${parseFloat(row['total capital'])}`);
-  
-  const contract = {
-    contractNumber: row['contract number']?.toUpperCase() || '',
-    totalCapital: parseFloat(row['total capital']) || 0,
-    interestType: row['interest type']?.toLowerCase() || 'fixed',
-    totalInstalments: parseInt(row['total instalments']) || 0,
-    firstInstalmentDate: isoDate,
-    vehicles: []
+  const validateContractRow = (row, rowNum, isNewContract) => {
+    const errors = [];
+    
+    const rawDate = row['first instalment date'] || '';
+    const isoDate = convertUKDateToISO(rawDate);
+    
+    // 🔥 DEBUG: Log what we're reading
+    console.log(`Row ${rowNum} - Contract: ${row['contract number']}, Raw Total Capital: "${row['total capital']}", Opening Balance: "${row['opening balance']}", Parsed: ${parseFloat(row['total capital'])}`);
+    
+    const contract = {
+      contractNumber: row['contract number']?.toUpperCase() || '',
+      totalCapital: parseFloat(row['total capital']) || 0,
+      openingBalance: parseFloat(row['opening balance']) || null, // NEW: Opening balance for interest calculations
+      interestType: row['interest type']?.toLowerCase() || 'fixed',
+      totalInstalments: parseInt(row['total instalments']) || 0,
+      firstInstalmentDate: isoDate,
+      vehicles: []
+    };
+
+    if (!contract.contractNumber) {
+      errors.push(`Row ${rowNum}: Contract number is required`);
+    }
+    if (contract.totalCapital <= 0) {
+      errors.push(`Row ${rowNum}: Total capital must be greater than 0`);
+    }
+    if (!['fixed', 'variable'].includes(contract.interestType)) {
+      errors.push(`Row ${rowNum}: Interest type must be 'fixed' or 'variable'`);
+    }
+    if (contract.totalInstalments <= 0) {
+      errors.push(`Row ${rowNum}: Total instalments must be greater than 0`);
+    }
+    if (!rawDate) {
+      errors.push(`Row ${rowNum}: First instalment date is required`);
+    }
+    if (rawDate && !isoDate) {
+      errors.push(`Row ${rowNum}: First instalment date must be in UK format DD/MM/YYYY or DD-MM-YYYY (e.g., 15/01/2023)`);
+    }
+
+    if (contract.interestType === 'fixed') {
+      contract.totalInterest = parseFloat(row['total interest']) || 0;
+      if (contract.totalInterest < 0) {
+        errors.push(`Row ${rowNum}: Total interest cannot be negative for fixed interest`);
+      }
+    } else {
+      contract.baseRate = parseFloat(row['base rate']) || 0;
+      contract.margin = parseFloat(row['margin']) || 0;
+      if (contract.baseRate < 0 || contract.margin < 0) {
+        errors.push(`Row ${rowNum}: Base rate and margin must be non-negative for variable interest`);
+      }
+      contract.interestRateAnnual = contract.baseRate + contract.margin;
+    }
+
+    return { errors, contract };
   };
-
-  if (!contract.contractNumber) {
-    errors.push(`Row ${rowNum}: Contract number is required`);
-  }
-  if (contract.totalCapital <= 0) {
-    errors.push(`Row ${rowNum}: Total capital must be greater than 0`);
-  }
-  if (!['fixed', 'variable'].includes(contract.interestType)) {
-    errors.push(`Row ${rowNum}: Interest type must be 'fixed' or 'variable'`);
-  }
-  if (contract.totalInstalments <= 0) {
-    errors.push(`Row ${rowNum}: Total instalments must be greater than 0`);
-  }
-  if (!rawDate) {
-    errors.push(`Row ${rowNum}: First instalment date is required`);
-  }
-  if (rawDate && !isoDate) {
-    errors.push(`Row ${rowNum}: First instalment date must be in UK format DD/MM/YYYY or DD-MM-YYYY (e.g., 15/01/2023)`);
-  }
-
-  if (contract.interestType === 'fixed') {
-    contract.totalInterest = parseFloat(row['total interest']) || 0;
-    if (contract.totalInterest < 0) {
-      errors.push(`Row ${rowNum}: Total interest cannot be negative for fixed interest`);
-    }
-  } else {
-    contract.baseRate = parseFloat(row['base rate']) || 0;
-    contract.margin = parseFloat(row['margin']) || 0;
-    if (contract.baseRate < 0 || contract.margin < 0) {
-      errors.push(`Row ${rowNum}: Base rate and margin must be non-negative for variable interest`);
-    }
-    contract.interestRateAnnual = contract.baseRate + contract.margin;
-  }
-
-  return { errors, contract };
-};
 
   // Validate vehicle data - NOW INCLUDES NET PRICE AND GROSS PRICE
   const validateVehicleRow = (row, rowNum) => {
@@ -212,113 +213,113 @@ const validateContractRow = (row, rowNum, isNewContract) => {
   };
 
   // Parse CSV and group by contract number
-const parseCSV = async (csvText) => {
-  const lines = csvText.split('\n').filter(line => line.trim());
-  if (lines.length < 2) {
-    setValidationErrors(['File is empty or has no data rows']);
-    setImportStatus('idle');
-    return;
-  }
-
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-  const requiredHeaders = [
-    'contract number',
-    'total capital',
-    'interest type',
-    'total instalments',
-    'first instalment date'
-  ];
-
-  const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
-  if (missingHeaders.length > 0) {
-    setValidationErrors([`Missing required columns: ${missingHeaders.join(', ')}`]);
-    setImportStatus('idle');
-    return;
-  }
-
-  const contractsMap = new Map();
-  const errors = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim());
-    if (values.join('') === '') continue;
-    
-    const row = {};
-    headers.forEach((header, index) => {
-      row[header] = values[index] || '';
-    });
-
-    const contractNumber = row['contract number']?.toUpperCase() || '';
-    if (!contractNumber) {
-      errors.push(`Row ${i + 1}: Contract number is required`);
-      continue;
-    }
-
-    // 🔥 FIX: Only process contract data on FIRST occurrence
-    if (!contractsMap.has(contractNumber)) {
-      const validation = validateContractRow(row, i + 1, true);
-      if (validation.errors.length > 0) {
-        errors.push(...validation.errors);
-        continue;
-      }
-      console.log('✅ Created contract:', contractNumber, 'with Total Capital:', validation.contract.totalCapital);
-      contractsMap.set(contractNumber, validation.contract);
-    }
-
-    // Add vehicle to the existing contract
-    const contract = contractsMap.get(contractNumber);
-    const vehicleValidation = validateVehicleRow(row, i + 1);
-    if (vehicleValidation.errors.length > 0) {
-      errors.push(...vehicleValidation.errors);
-    } else {
-      contract.vehicles.push(vehicleValidation.vehicle);
-      console.log('✅ Added vehicle:', vehicleValidation.vehicle.registration, 'to contract:', contractNumber);
-    }
-  }
-
-  if (errors.length > 0) {
-    setValidationErrors(errors);
-    setImportStatus('idle');
-    return;
-  }
-
-  const contracts = Array.from(contractsMap.values());
-  
-  // Log final contract data
-  contracts.forEach(c => {
-    console.log('📊 Final Contract:', c.contractNumber, 'Total Capital:', c.totalCapital, 'Vehicles:', c.vehicles.length);
-  });
-  
-  // Check for duplicates
-  try {
-    const { getAllContracts } = await import('../services/firestoreService.js');
-    const existingContracts = await getAllContracts();
-    const existingNumbers = new Set(existingContracts.map(c => c.contractNumber.toUpperCase()));
-    
-    const duplicates = contracts.filter(c => existingNumbers.has(c.contractNumber));
-    
-    if (duplicates.length > 0) {
-      setValidationErrors([
-        `❌ DUPLICATE CONTRACT NUMBERS FOUND!`,
-        `The following contract numbers ALREADY EXIST in your system:`,
-        ...duplicates.map(c => `  • ${c.contractNumber}`),
-        ``,
-        `Please remove these from your CSV or use different contract numbers.`
-      ]);
+  const parseCSV = async (csvText) => {
+    const lines = csvText.split('\n').filter(line => line.trim());
+    if (lines.length < 2) {
+      setValidationErrors(['File is empty or has no data rows']);
       setImportStatus('idle');
       return;
     }
-  } catch (error) {
-    console.error('Error checking for duplicates:', error);
-    setValidationErrors(['Failed to check for duplicate contracts. Please try again.']);
-    setImportStatus('idle');
-    return;
-  }
 
-  setParsedData(contracts);
-  setValidationErrors([]);
-  setImportStatus('validated');
-};
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const requiredHeaders = [
+      'contract number',
+      'total capital',
+      'interest type',
+      'total instalments',
+      'first instalment date'
+    ];
+
+    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+    if (missingHeaders.length > 0) {
+      setValidationErrors([`Missing required columns: ${missingHeaders.join(', ')}`]);
+      setImportStatus('idle');
+      return;
+    }
+
+    const contractsMap = new Map();
+    const errors = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim());
+      if (values.join('') === '') continue;
+      
+      const row = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
+      });
+
+      const contractNumber = row['contract number']?.toUpperCase() || '';
+      if (!contractNumber) {
+        errors.push(`Row ${i + 1}: Contract number is required`);
+        continue;
+      }
+
+      // 🔥 FIX: Only process contract data on FIRST occurrence
+      if (!contractsMap.has(contractNumber)) {
+        const validation = validateContractRow(row, i + 1, true);
+        if (validation.errors.length > 0) {
+          errors.push(...validation.errors);
+          continue;
+        }
+        console.log('✅ Created contract:', contractNumber, 'with Total Capital:', validation.contract.totalCapital, 'Opening Balance:', validation.contract.openingBalance);
+        contractsMap.set(contractNumber, validation.contract);
+      }
+
+      // Add vehicle to the existing contract
+      const contract = contractsMap.get(contractNumber);
+      const vehicleValidation = validateVehicleRow(row, i + 1);
+      if (vehicleValidation.errors.length > 0) {
+        errors.push(...vehicleValidation.errors);
+      } else {
+        contract.vehicles.push(vehicleValidation.vehicle);
+        console.log('✅ Added vehicle:', vehicleValidation.vehicle.registration, 'to contract:', contractNumber);
+      }
+    }
+
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      setImportStatus('idle');
+      return;
+    }
+
+    const contracts = Array.from(contractsMap.values());
+    
+    // Log final contract data
+    contracts.forEach(c => {
+      console.log('📊 Final Contract:', c.contractNumber, 'Total Capital:', c.totalCapital, 'Opening Balance:', c.openingBalance, 'Vehicles:', c.vehicles.length);
+    });
+    
+    // Check for duplicates
+    try {
+      const { getAllContracts } = await import('../services/firestoreService.js');
+      const existingContracts = await getAllContracts();
+      const existingNumbers = new Set(existingContracts.map(c => c.contractNumber.toUpperCase()));
+      
+      const duplicates = contracts.filter(c => existingNumbers.has(c.contractNumber));
+      
+      if (duplicates.length > 0) {
+        setValidationErrors([
+          `❌ DUPLICATE CONTRACT NUMBERS FOUND!`,
+          `The following contract numbers ALREADY EXIST in your system:`,
+          ...duplicates.map(c => `  • ${c.contractNumber}`),
+          ``,
+          `Please remove these from your CSV or use different contract numbers.`
+        ]);
+        setImportStatus('idle');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking for duplicates:', error);
+      setValidationErrors(['Failed to check for duplicate contracts. Please try again.']);
+      setImportStatus('idle');
+      return;
+    }
+
+    setParsedData(contracts);
+    setValidationErrors([]);
+    setImportStatus('validated');
+  };
 
   // Build contract data for Firestore
   const buildContractData = (contract) => {
@@ -339,6 +340,11 @@ const parseCSV = async (csvText) => {
       currentMonthlyCapital: perVehicleRate * activeVehicles.length,
       status: activeVehicles.length === 0 ? 'settled' : 'active'
     };
+
+    // Add opening balance if provided (for historic imports with current liability)
+    if (contract.openingBalance) {
+      contractData.openingBalance = contract.openingBalance;
+    }
 
     if (contract.interestType === 'fixed') {
       contractData.totalInterest = contract.totalInterest;
@@ -380,15 +386,15 @@ const parseCSV = async (csvText) => {
     }
   };
 
-  // Download CSV template - UPDATED WITH NET PRICE AND GROSS PRICE
+  // Download CSV template - UPDATED WITH OPENING BALANCE FOR HISTORIC IMPORTS
   const downloadTemplate = () => {
-    const template = `Contract Number,Total Capital,Interest Type,Total Interest,Base Rate,Margin,Total Instalments,First Instalment Date,Vehicle Registration,Vehicle Make,Vehicle Model,Vehicle Status,Settled Date,Net Price,Gross Price
-EXAMPLE001,50000,fixed,5000,,,48,15/01/2023,AB12CDE,Ford,Transit,active,,25000,30000
-EXAMPLE002,75000,variable,,5.25,3.50,60,01/06/2022,XY34ZAB,Mercedes,Sprinter,settled,30/11/2024,35000,42000
-EXAMPLE002,75000,variable,,5.25,3.50,60,01/06/2022,CD56EFG,Mercedes,Vito,active,,28000,33600
-MULTI001,100000,fixed,10000,,,36,01/01/2024,AA11BBB,Ford,Transit,active,,32000,38400
-MULTI001,100000,fixed,10000,,,36,01/01/2024,CC22DDD,Ford,Ranger,active,,28000,33600
-MULTI001,100000,fixed,10000,,,36,01/01/2024,EE33FFF,Ford,Focus,settled,15/11/2024,18000,21600`;
+    const template = `Contract Number,Total Capital,Opening Balance,Interest Type,Total Interest,Base Rate,Margin,Total Instalments,First Instalment Date,Vehicle Registration,Vehicle Make,Vehicle Model,Vehicle Status,Settled Date,Net Price,Gross Price
+EXAMPLE001,50000,,fixed,5000,,,48,15/01/2023,AB12CDE,Ford,Transit,active,,25000,30000
+EXAMPLE002,75000,72500,variable,,5.25,3.50,60,01/06/2022,XY34ZAB,Mercedes,Sprinter,settled,30/11/2024,35000,42000
+EXAMPLE002,75000,,variable,,5.25,3.50,60,01/06/2022,CD56EFG,Mercedes,Vito,active,,28000,33600
+MULTI001,100000,95000,fixed,10000,,,36,01/01/2024,AA11BBB,Ford,Transit,active,,32000,38400
+MULTI001,100000,,fixed,10000,,,36,01/01/2024,CC22DDD,Ford,Ranger,active,,28000,33600
+MULTI001,100000,,fixed,10000,,,36,01/01/2024,EE33FFF,Ford,Focus,settled,15/11/2024,18000,21600`;
 
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
