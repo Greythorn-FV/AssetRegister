@@ -42,6 +42,8 @@ const ContractDetailModal = ({ contract, isOpen, onClose, onUpdate }) => {
     handleQuickSettleVehicle,
     handleUnsettleVehicle,
     handleUpdateVehicleNote,
+    handleSoldVehicle,
+    handleUndoSoldVehicle,
     handleDeleteContract,
     openRateChangeModal,
     closeRateChangeModal,
@@ -106,6 +108,8 @@ const ContractDetailModal = ({ contract, isOpen, onClose, onUpdate }) => {
               onUnsettleVehicle={handleUnsettleVehicle}
               onUpdateVehicleNote={handleUpdateVehicleNote}
               onSettleVehicleWithImpact={handleSettleVehicleClick}
+              onSoldVehicle={handleSoldVehicle}
+              onUndoSoldVehicle={handleUndoSoldVehicle}
               onUpdateRate={openRateChangeModal}
               onViewStatement={openStatementModal} // NEW
             />

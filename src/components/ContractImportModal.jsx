@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { addContract } from '../services/firestoreService.js';
 import { useIsMobile } from '../hooks/useIsMobile.js';
 import { colors, gradients, fonts, shadows, radius } from '../styles/theme.js';
@@ -57,28 +58,54 @@ const ContractImportModal = ({ isOpen, onClose, onImportComplete }) => {
     }
   };
 
-  // Process uploaded file
-  const handleFile = async (file) => {
+  // Process uploaded file - supports CSV and XLSX/XLS
+  const handleFile = async (uploadedFile) => {
+    console.log('📁 File upload:', uploadedFile.name, 'Type:', uploadedFile.type, 'Size:', uploadedFile.size);
     const validTypes = [
       'text/csv',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ];
+    const isExcel = uploadedFile.name.endsWith('.xlsx') || uploadedFile.name.endsWith('.xls');
+    const isCsv = uploadedFile.name.endsWith('.csv');
 
-    if (!validTypes.includes(file.type) && !file.name.endsWith('.csv')) {
+    if (!validTypes.includes(uploadedFile.type) && !isCsv && !isExcel) {
       alert('Please upload a CSV or Excel file');
       return;
     }
 
-    setFile(file);
+    setFile(uploadedFile);
     setImportStatus('validating');
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const text = e.target.result;
-      await parseCSV(text);
-    };
-    reader.readAsText(file);
+    if (isExcel) {
+      // Read Excel file as ArrayBuffer and convert to CSV using SheetJS
+      console.log('📊 Reading as Excel file...');
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          console.log('📊 Sheets found:', workbook.SheetNames);
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const csvText = XLSX.utils.sheet_to_csv(firstSheet);
+          console.log('📊 CSV first 500 chars:', csvText.substring(0, 500));
+          await parseCSV(csvText);
+        } catch (err) {
+          console.error('📊 Excel parse error:', err);
+          setValidationErrors(['Failed to parse Excel file: ' + err.message]);
+          setImportStatus('idle');
+        }
+      };
+      reader.readAsArrayBuffer(uploadedFile);
+    } else {
+      // Read CSV as text
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const text = e.target.result;
+        await parseCSV(text);
+      };
+      reader.readAsText(uploadedFile);
+    }
   };
 
   // Convert UK date format to ISO (YYYY-MM-DD)

@@ -2,7 +2,7 @@
 // Custom hook for Contract Detail Modal business logic - WITH STATEMENT MODAL
 
 import { useState } from 'react';
-import { settleVehicle, unsettleVehicle, updateVehicleNote, updateContract, deleteContract } from '../services/firestoreService.js';
+import { settleVehicle, unsettleVehicle, markVehicleSold, undoSoldVehicle, updateVehicleNote, updateContract, deleteContract } from '../services/firestoreService.js';
 import { calculateContractMetrics } from '../services/calculationService.js';
 
 export const useContractDetail = (contract, onUpdate, onClose) => {
@@ -185,6 +185,40 @@ export const useContractDetail = (contract, onUpdate, onClose) => {
     }
   };
 
+  // Mark vehicle as sold
+  const handleSoldVehicle = async (registration, financeSettled) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      await markVehicleSold(contract.id, registration, financeSettled);
+      onUpdate();
+    } catch (err) {
+      setError(err.message || 'Failed to mark vehicle as sold');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Undo sold vehicle — restore to active
+  const handleUndoSoldVehicle = async (registration) => {
+    if (!window.confirm(`Move vehicle ${registration} back to Active?`)) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await undoSoldVehicle(contract.id, registration);
+      onUpdate();
+    } catch (err) {
+      setError(err.message || 'Failed to undo sold vehicle');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Delete entire contract
   const handleDeleteContract = async () => {
     if (!window.confirm(`Delete contract ${contract.contractNumber}? It will be moved to Trash and can be restored later.`)) {
@@ -255,6 +289,8 @@ export const useContractDetail = (contract, onUpdate, onClose) => {
     handleQuickSettleVehicle,
     handleUnsettleVehicle,
     handleUpdateVehicleNote,
+    handleSoldVehicle,
+    handleUndoSoldVehicle,
     handleDeleteContract,
     openRateChangeModal,
     closeRateChangeModal,

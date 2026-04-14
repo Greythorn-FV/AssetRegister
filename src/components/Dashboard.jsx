@@ -93,12 +93,25 @@ const Dashboard = ({ onViewGantt, onViewReports }) => {
       return sum + (metrics.interestOutstanding || 0);
     }, 0);
 
+    // Only count contracts that have an instalment due next month
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
     const nextMonthCapitalDue = activeContracts.reduce((sum, contract) => {
+      const start = new Date(contract.firstInstalmentDate);
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + contract.totalInstalments);
+      // Skip if next month is before contract starts or after it ends
+      if (nextMonth < start || nextMonth > end) return sum;
       const metrics = calculateContractMetrics(contract);
       return sum + (metrics.currentMonthlyCapital || 0);
     }, 0);
 
     const nextMonthInterestDue = activeContracts.reduce((sum, contract) => {
+      const start = new Date(contract.firstInstalmentDate);
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + contract.totalInstalments);
+      if (nextMonth < start || nextMonth > end) return sum;
       const metrics = calculateContractMetrics(contract);
       return sum + (metrics.monthlyInterest || 0);
     }, 0);

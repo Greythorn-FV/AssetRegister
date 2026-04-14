@@ -280,6 +280,82 @@ export const unsettleVehicle = async (contractId, registration) => {
   }
 };
 
+// Mark vehicle as sold — with optional finance settlement
+export const markVehicleSold = async (contractId, registration, financeSettled) => {
+  try {
+    const contract = await getContractById(contractId);
+    const soldDate = new Date();
+
+    const updatedVehicles = contract.vehicles.map(v => {
+      if (v.registration.toUpperCase() === registration.toUpperCase() && v.status === 'active') {
+        const monthsElapsed = Math.floor(
+          (soldDate - new Date(contract.firstInstalmentDate)) / (30.44 * 24 * 60 * 60 * 1000)
+        );
+        return {
+          ...v,
+          status: 'sold',
+          soldDate: soldDate.toISOString(),
+          financeSettled: financeSettled,
+          settledDate: financeSettled ? soldDate.toISOString() : null,
+          settledAtMonth: financeSettled ? monthsElapsed : null
+        };
+      }
+      return v;
+    });
+
+    const activeCount = updatedVehicles.filter(v => v.status === 'active').length;
+    const currentMonthlyCapital = contract.perVehicleCapitalRate * activeCount;
+
+    // Contract is settled only if no active vehicles AND no sold-but-unsettled vehicles
+    const hasUnsettledFinance = updatedVehicles.some(v => v.status === 'sold' && !v.financeSettled);
+    const contractStatus = activeCount === 0 && !hasUnsettledFinance ? 'settled' : 'active';
+
+    await updateContract(contractId, {
+      vehicles: updatedVehicles,
+      activeVehiclesCount: activeCount,
+      currentMonthlyCapital,
+      status: contractStatus
+    });
+  } catch (error) {
+    console.error('Error marking vehicle as sold:', error);
+    throw new Error('Failed to mark vehicle as sold');
+  }
+};
+
+// Undo sold vehicle — restore to active
+export const undoSoldVehicle = async (contractId, registration) => {
+  try {
+    const contract = await getContractById(contractId);
+
+    const updatedVehicles = contract.vehicles.map(v => {
+      if (v.registration.toUpperCase() === registration.toUpperCase() && v.status === 'sold') {
+        return {
+          ...v,
+          status: 'active',
+          soldDate: null,
+          financeSettled: null,
+          settledDate: null,
+          settledAtMonth: null
+        };
+      }
+      return v;
+    });
+
+    const activeCount = updatedVehicles.filter(v => v.status === 'active').length;
+    const currentMonthlyCapital = contract.perVehicleCapitalRate * activeCount;
+
+    await updateContract(contractId, {
+      vehicles: updatedVehicles,
+      activeVehiclesCount: activeCount,
+      currentMonthlyCapital,
+      status: 'active'
+    });
+  } catch (error) {
+    console.error('Error undoing sold vehicle:', error);
+    throw new Error('Failed to undo sold vehicle');
+  }
+};
+
 // Soft delete — move contract to deletedContracts collection
 const DELETED_COLLECTION = 'deletedContracts';
 

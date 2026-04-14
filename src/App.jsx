@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import Dashboard from './components/Dashboard.jsx';
 import GanttChart from './components/GanttChart.jsx';
 import ReportsPage from './components/ReportsPage.jsx'; // ADD THIS IMPORT
+import './migrationRunner.js'; // ONE-TIME: Remove after running migration
 
 function App() {
   const [view, setView] = useState('dashboard'); // dashboard, gantt, reports

@@ -19,6 +19,8 @@ const ContractViewSection = ({
   onUnsettleVehicle,
   onUpdateVehicleNote,
   onSettleVehicleWithImpact,
+  onSoldVehicle,
+  onUndoSoldVehicle,
   onUpdateRate,
   onViewStatement
 }) => {
@@ -152,6 +154,8 @@ const ContractViewSection = ({
         onUnsettleVehicle={onUnsettleVehicle}
         onUpdateVehicleNote={onUpdateVehicleNote}
         onSettleVehicleWithImpact={onSettleVehicleWithImpact}
+        onSoldVehicle={onSoldVehicle}
+        onUndoSoldVehicle={onUndoSoldVehicle}
       />
 
       {/* Action Buttons */}

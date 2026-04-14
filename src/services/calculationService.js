@@ -67,27 +67,31 @@ export const calculateMonthlyInterest = (contract, monthDate = new Date(), outst
 /**
  * Calculate interest outstanding
  */
-export const calculateInterestOutstanding = (contract, monthsRemaining) => {
+export const calculateInterestOutstanding = (contract, monthsRemaining, currentCapitalOutstanding = null) => {
   if (contract.interestType === 'fixed') {
     const monthlyInterest = contract.totalInterest / contract.totalInstalments;
     return monthlyInterest * monthsRemaining;
   }
-  
-  // Variable - estimate based on current balance
+
+  // Variable - estimate based on current balance (active vehicles only)
   const annualRate = contract.interestRateAnnual || (contract.baseRate + contract.margin);
   const dailyRate = (annualRate / 100) / 365;
   const avgDaysPerMonth = 30.44;
-  
-  // Calculate remaining interest based on declining balance
-  const monthlyCapital = contract.totalCapital / contract.totalInstalments;
+
+  // Use passed-in outstanding (active vehicles) or fall back to full contract
+  const monthlyCapital = currentCapitalOutstanding !== null
+    ? currentCapitalOutstanding / monthsRemaining
+    : contract.totalCapital / contract.totalInstalments;
   let totalInterest = 0;
-  let balance = monthlyCapital * monthsRemaining; // Current outstanding
-  
+  let balance = currentCapitalOutstanding !== null
+    ? currentCapitalOutstanding
+    : monthlyCapital * monthsRemaining;
+
   for (let i = 0; i < monthsRemaining; i++) {
     totalInterest += balance * dailyRate * avgDaysPerMonth;
     balance -= monthlyCapital;
   }
-  
+
   return totalInterest;
 };
 
@@ -103,55 +107,81 @@ export const calculateProgress = (monthsElapsed, totalInstalments) => {
  * Calculate all contract metrics at once (FIXED VERSION)
  */
 export const calculateContractMetrics = (contract) => {
+  // If contract is fully settled, return zeroed-out metrics
+  if (contract.status === 'settled') {
+    const monthsElapsed = getMonthsElapsed(contract.firstInstalmentDate);
+    const perVehicleRate = calculatePerVehicleRate(
+      contract.totalCapital, contract.totalInstalments, contract.originalVehicleCount
+    );
+    const monthlyCapitalInstalment = calculateMonthlyCapitalInstalment(
+      contract.totalCapital, contract.totalInstalments
+    );
+    return {
+      monthsElapsed,
+      monthsRemaining: 0,
+      perVehicleRate,
+      monthlyCapitalInstalment,
+      currentMonthlyCapital: 0,
+      capitalOutstanding: 0,
+      monthlyInterest: 0,
+      interestOutstanding: 0,
+      progress: 100,
+      interestType: contract.interestType || 'fixed',
+      effectiveRate: contract.interestType === 'variable'
+        ? (contract.interestRateAnnual || (contract.baseRate + contract.margin))
+        : null
+    };
+  }
+
   const monthsElapsed = getMonthsElapsed(contract.firstInstalmentDate);
   const monthsRemaining = getMonthsRemaining(contract.totalInstalments, contract.firstInstalmentDate);
-  
+
   // Per vehicle rate
   const perVehicleRate = calculatePerVehicleRate(
     contract.totalCapital,
     contract.totalInstalments,
     contract.originalVehicleCount
   );
-  
+
   // Monthly capital instalment (TOTAL for contract - what you pay each month)
   const monthlyCapitalInstalment = calculateMonthlyCapitalInstalment(
     contract.totalCapital,
     contract.totalInstalments
   );
-  
+
   // Current monthly capital (adjusted for settled vehicles)
   const currentMonthlyCapital = calculateCurrentMonthlyCapital(
     perVehicleRate,
     contract.activeVehiclesCount
   );
-  
-  // FIXED: Capital outstanding uses MONTHLY INSTALMENT, not per-vehicle
+
+  // Capital outstanding based on ACTIVE vehicles only (settled vehicles no longer owe)
   const capitalOutstanding = calculateContractCapitalOutstanding(
-    monthlyCapitalInstalment,  // FIXED: Use total monthly, not current
+    currentMonthlyCapital,
     monthsRemaining
   );
-  
+
   // Calculate current month's interest
   const today = new Date();
   const monthlyInterest = calculateMonthlyInterest(contract, today, capitalOutstanding);
-  
-  // Calculate remaining interest
-  const interestOutstanding = calculateInterestOutstanding(contract, monthsRemaining);
-  
+
+  // Calculate remaining interest based on active-vehicle outstanding
+  const interestOutstanding = calculateInterestOutstanding(contract, monthsRemaining, capitalOutstanding);
+
   const progress = calculateProgress(monthsElapsed, contract.totalInstalments);
-  
+
   return {
     monthsElapsed,
     monthsRemaining,
     perVehicleRate,
-    monthlyCapitalInstalment,  // NEW: Total monthly instalment
-    currentMonthlyCapital,     // Adjusted for active vehicles
-    capitalOutstanding,        // FIXED: Now uses correct calculation
+    monthlyCapitalInstalment,
+    currentMonthlyCapital,
+    capitalOutstanding,
     monthlyInterest,
     interestOutstanding,
     progress,
     interestType: contract.interestType || 'fixed',
-    effectiveRate: contract.interestType === 'variable' 
+    effectiveRate: contract.interestType === 'variable'
       ? (contract.interestRateAnnual || (contract.baseRate + contract.margin))
       : null
   };
@@ -173,7 +203,7 @@ export const calculatePortfolioStats = (contracts) => {
     const metrics = calculateContractMetrics(contract);
     totalCapitalOutstanding += metrics.capitalOutstanding;
     totalInterestOutstanding += metrics.interestOutstanding;
-    nextMonthCapitalDue += metrics.monthlyCapitalInstalment; // Use total monthly
+    nextMonthCapitalDue += metrics.currentMonthlyCapital; // Active vehicles only
     totalActiveVehicles += contract.activeVehiclesCount;
   });
   
