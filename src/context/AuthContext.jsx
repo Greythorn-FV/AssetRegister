@@ -32,10 +32,11 @@ const SHARED_PASSWORD = 'Awesome1!';
 const STORAGE_KEY = 'asset-register-auth-user';
 
 // Per-email access expiry (ISO timestamp). Emails not listed here never expire.
-// The visitor account expires 48 hours after it was set up. After this moment
-// the visitor can no longer log in and any active visitor session is ended.
+// The visitor account expires ~60 hours after it was set up (rounded up to the
+// next whole hour). After this moment the visitor can no longer log in and any
+// active visitor session is ended.
 const EMAIL_EXPIRY = {
-  'visitor@greythorn.services': '2026-06-09T20:50:07Z'
+  'visitor@greythorn.services': '2026-06-10T09:00:00Z'
 };
 
 // Returns the expiry time (ms since epoch) for an email, or null if it never expires.
