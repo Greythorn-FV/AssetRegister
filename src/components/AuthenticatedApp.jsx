@@ -1,23 +1,13 @@
 // src/components/AuthenticatedApp.jsx
 // Authenticated App Wrapper - Shows main app content or auth pages based on login state
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import LoginPage from './LoginPage.jsx';
-import SignUpPage from './SignUpPage.jsx';
-import ForgotPasswordPage from './ForgotPasswordPage.jsx';
 import InactivityMonitor from './InactivityMonitor.jsx';
-
-// Auth page states
-const AUTH_PAGES = {
-  LOGIN: 'login',
-  SIGNUP: 'signup',
-  FORGOT_PASSWORD: 'forgot_password'
-};
 
 const AuthenticatedApp = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  const [authPage, setAuthPage] = useState(AUTH_PAGES.LOGIN);
 
   // Show loading spinner while checking auth state
   if (loading) {
@@ -44,32 +34,9 @@ const AuthenticatedApp = ({ children }) => {
     );
   }
 
-  // If not authenticated, show auth pages
+  // If not authenticated, show the login page
   if (!isAuthenticated) {
-    switch (authPage) {
-      case AUTH_PAGES.SIGNUP:
-        return (
-          <SignUpPage 
-            onNavigateToLogin={() => setAuthPage(AUTH_PAGES.LOGIN)}
-          />
-        );
-      
-      case AUTH_PAGES.FORGOT_PASSWORD:
-        return (
-          <ForgotPasswordPage 
-            onNavigateToLogin={() => setAuthPage(AUTH_PAGES.LOGIN)}
-          />
-        );
-      
-      case AUTH_PAGES.LOGIN:
-      default:
-        return (
-          <LoginPage 
-            onNavigateToSignup={() => setAuthPage(AUTH_PAGES.SIGNUP)}
-            onNavigateToForgotPassword={() => setAuthPage(AUTH_PAGES.FORGOT_PASSWORD)}
-          />
-        );
-    }
+    return <LoginPage />;
   }
 
   // If authenticated, show main app wrapped in inactivity monitor

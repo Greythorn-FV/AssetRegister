@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
 
-const LoginPage = ({ onNavigateToSignup, onNavigateToForgotPassword }) => {
+const LoginPage = () => {
   const { login, error, clearError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -108,7 +108,7 @@ const LoginPage = ({ onNavigateToSignup, onNavigateToForgotPassword }) => {
             </div>
           </div>
 
-          {/* Remember Me & Forgot Password Row */}
+          {/* Remember Me Row */}
           <div style={styles.optionsRow}>
             <label style={styles.checkboxLabel}>
               <input
@@ -120,14 +120,6 @@ const LoginPage = ({ onNavigateToSignup, onNavigateToForgotPassword }) => {
               />
               <span style={styles.checkboxText}>Remember me</span>
             </label>
-            <button
-              type="button"
-              onClick={onNavigateToForgotPassword}
-              style={styles.linkButton}
-              disabled={isLoading}
-            >
-              Forgot password?
-            </button>
           </div>
 
           {/* Submit Button */}
@@ -150,19 +142,6 @@ const LoginPage = ({ onNavigateToSignup, onNavigateToForgotPassword }) => {
             )}
           </button>
         </form>
-
-        {/* Sign Up Link */}
-        <div style={styles.signupContainer}>
-          <span style={styles.signupText}>Don't have an account?</span>
-          <button
-            type="button"
-            onClick={onNavigateToSignup}
-            style={styles.signupLink}
-            disabled={isLoading}
-          >
-            Sign up
-          </button>
-        </div>
       </div>
 
       {/* Footer */}

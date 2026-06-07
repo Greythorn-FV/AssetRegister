@@ -1,18 +1,13 @@
 // src/context/AuthContext.jsx
-// Authentication Context - Manages user auth state across the entire app
+// Authentication Context - Simple temporary login for internal/shared access.
+//
+// NOTE: This is a lightweight, client-side-only login intended for temporary
+// internal use. It checks a hardcoded list of allowed emails against a shared
+// password. It does NOT use Firebase Auth and provides no real security — anyone
+// who can read the bundled JS can see these credentials. Replace with proper
+// authentication before exposing this app publicly.
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  sendPasswordResetEmail,
-  browserSessionPersistence,
-  browserLocalPersistence,
-  setPersistence
-} from 'firebase/auth';
-import { auth } from '../services/firebaseConfig.js';
 
 // Create the context
 const AuthContext = createContext(null);
@@ -26,14 +21,27 @@ export const useAuth = () => {
   return context;
 };
 
-// Allowed email domain
-const ALLOWED_DOMAIN = 'greythorn.services';
+// --- Temporary hardcoded credentials -------------------------------------
+// Allowed emails (case-insensitive). All share the same password below.
+const ALLOWED_EMAILS = [
+  'rp@greythorn.services',
+  'nlb@greythorn.services',
+  'visitor@greythorn.services'
+];
+const SHARED_PASSWORD = 'Awesome1!';
+const STORAGE_KEY = 'asset-register-auth-user';
+// -------------------------------------------------------------------------
 
-// Validate email domain
-const validateEmailDomain = (email) => {
-  if (!email) return false;
-  const domain = email.split('@')[1]?.toLowerCase();
-  return domain === ALLOWED_DOMAIN;
+// Read the persisted user from storage (session or local) on first load.
+const readStoredUser = () => {
+  try {
+    const raw =
+      window.localStorage.getItem(STORAGE_KEY) ||
+      window.sessionStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 };
 
 // Auth Provider Component
@@ -42,134 +50,53 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Listen for auth state changes
+  // Restore any persisted session on mount
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    // Cleanup subscription
-    return () => unsubscribe();
+    setUser(readStoredUser());
+    setLoading(false);
   }, []);
 
   // Login function
   const login = async (email, password, rememberMe = false) => {
     setError(null);
-    try {
-      // Set persistence based on "remember me" choice
-      const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-      await setPersistence(auth, persistence);
-      
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      return { success: true, user: result.user };
-    } catch (err) {
-      let message = 'Login failed. Please try again.';
-      
-      switch (err.code) {
-        case 'auth/user-not-found':
-          message = 'No account found with this email address.';
-          break;
-        case 'auth/wrong-password':
-          message = 'Incorrect password. Please try again.';
-          break;
-        case 'auth/invalid-email':
-          message = 'Please enter a valid email address.';
-          break;
-        case 'auth/too-many-requests':
-          message = 'Too many failed attempts. Please try again later.';
-          break;
-        case 'auth/invalid-credential':
-          message = 'Invalid email or password.';
-          break;
-        default:
-          message = err.message || 'Login failed. Please try again.';
-      }
-      
-      setError(message);
-      return { success: false, error: message };
-    }
-  };
 
-  // Sign up function
-  const signup = async (email, password) => {
-    setError(null);
-    
-    // Frontend domain validation
-    if (!validateEmailDomain(email)) {
-      const message = `Only @${ALLOWED_DOMAIN} email addresses are allowed.`;
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    const isAllowedEmail = ALLOWED_EMAILS.includes(normalizedEmail);
+    const isCorrectPassword = password === SHARED_PASSWORD;
+
+    // Use a single generic message so we don't reveal which part was wrong.
+    if (!isAllowedEmail || !isCorrectPassword) {
+      const message = 'Invalid email or password.';
       setError(message);
       return { success: false, error: message };
     }
 
+    const loggedInUser = { email: normalizedEmail };
+
     try {
-      // Set local persistence for new signups (they can change on next login)
-      await setPersistence(auth, browserLocalPersistence);
-      
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      return { success: true, user: result.user };
-    } catch (err) {
-      let message = 'Sign up failed. Please try again.';
-      
-      switch (err.code) {
-        case 'auth/email-already-in-use':
-          message = 'An account with this email already exists.';
-          break;
-        case 'auth/invalid-email':
-          message = 'Please enter a valid email address.';
-          break;
-        case 'auth/weak-password':
-          message = 'Password should be at least 6 characters.';
-          break;
-        default:
-          // Check if it's our custom Cloud Function error
-          if (err.message?.includes('unauthorized domain')) {
-            message = `Only @${ALLOWED_DOMAIN} email addresses are allowed.`;
-          } else {
-            message = err.message || 'Sign up failed. Please try again.';
-          }
-      }
-      
-      setError(message);
-      return { success: false, error: message };
+      // "Remember me" -> persist across browser sessions; otherwise session-only.
+      const store = rememberMe ? window.localStorage : window.sessionStorage;
+      store.setItem(STORAGE_KEY, JSON.stringify(loggedInUser));
+    } catch {
+      // Storage may be unavailable (private mode); the in-memory state below
+      // still lets the user use the app for this tab.
     }
+
+    setUser(loggedInUser);
+    return { success: true, user: loggedInUser };
   };
 
   // Logout function
   const logout = async () => {
     setError(null);
     try {
-      await signOut(auth);
-      return { success: true };
-    } catch (err) {
-      setError('Logout failed. Please try again.');
-      return { success: false, error: err.message };
+      window.localStorage.removeItem(STORAGE_KEY);
+      window.sessionStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore storage errors
     }
-  };
-
-  // Reset password function
-  const resetPassword = async (email) => {
-    setError(null);
-    try {
-      await sendPasswordResetEmail(auth, email);
-      return { success: true };
-    } catch (err) {
-      let message = 'Password reset failed. Please try again.';
-      
-      switch (err.code) {
-        case 'auth/user-not-found':
-          message = 'No account found with this email address.';
-          break;
-        case 'auth/invalid-email':
-          message = 'Please enter a valid email address.';
-          break;
-        default:
-          message = err.message || 'Password reset failed. Please try again.';
-      }
-      
-      setError(message);
-      return { success: false, error: message };
-    }
+    setUser(null);
+    return { success: true };
   };
 
   // Clear error
@@ -180,9 +107,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     login,
-    signup,
     logout,
-    resetPassword,
     clearError,
     isAuthenticated: !!user
   };

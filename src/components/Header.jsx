@@ -1,12 +1,21 @@
 //src/components/Header.jsx//
 import React from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, LogOut } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import { colors, gradients, fonts, shadows, radius } from '../styles/theme.js';
 
 const Header = ({ title, children, mobileActions, onBack }) => {
   const isMobile = useIsMobile();
+  const { logout, isAuthenticated } = useAuth();
   const s = getStyles(isMobile);
+
+  const logoutButton = isAuthenticated ? (
+    <button onClick={() => logout()} style={s.logoutBtn} title="Sign out">
+      <LogOut size={isMobile ? 18 : 16} />
+      {!isMobile && <span>Sign Out</span>}
+    </button>
+  ) : null;
 
   return (
     <div style={s.header}>
@@ -22,13 +31,17 @@ const Header = ({ title, children, mobileActions, onBack }) => {
           style={s.logo}
         />
         {title && <h1 style={s.title}>{title}</h1>}
-        {isMobile && mobileActions && (
-          <div style={s.mobileActionsSlot}>{mobileActions}</div>
+        {isMobile && (
+          <div style={s.mobileActionsSlot}>
+            {mobileActions}
+            {logoutButton}
+          </div>
         )}
       </div>
       {!isMobile && (
         <div style={s.actions}>
           {children}
+          {logoutButton}
         </div>
       )}
     </div>
@@ -83,7 +96,10 @@ const getStyles = (m) => ({
   },
   mobileActionsSlot: {
     flexShrink: 0,
-    marginLeft: 'auto'
+    marginLeft: 'auto',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
   },
   actions: {
     display: 'flex',
@@ -91,6 +107,25 @@ const getStyles = (m) => ({
     flexShrink: 0,
     flexWrap: 'wrap',
     justifyContent: 'flex-end'
+  },
+  logoutBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    height: m ? '36px' : 'auto',
+    width: m ? '36px' : 'auto',
+    padding: m ? '0' : '8px 14px',
+    borderRadius: radius.md,
+    background: colors.background,
+    border: `1px solid ${colors.border}`,
+    color: colors.primary,
+    cursor: 'pointer',
+    fontSize: fonts.size.sm,
+    fontWeight: fonts.weight.semibold,
+    fontFamily: 'inherit',
+    flexShrink: 0,
+    WebkitTapHighlightColor: 'transparent'
   }
 });
 
